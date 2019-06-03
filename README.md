@@ -25,3 +25,6 @@ Testing codes have been released.
 1. Download the [pretrained models](https://drive.google.com/open?id=1pFMrZQaqSeBJqGHSjzAlHvJ4jzHnKleE) and [testing datasts](https://drive.google.com/open?id=10-gUO6zBeOpWEamrWKCtSkkUFukB9W5m).
 
 2. Run `test_Vid4_REDS4_with_GT.py`
+
+
+Test lines.
