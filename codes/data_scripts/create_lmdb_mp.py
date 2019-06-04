@@ -35,12 +35,12 @@ def vimeo90k():
     if mode == 'GT':
         img_folder = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet/sequences'
         lmdb_save_path = '/home/xtwang/datasets/vimeo90k/vimeo90k_train_GT.lmdb'  # must end with .lmdb
-        txt_file = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet/sep_trainlist_test.txt'
+        txt_file = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet/sep_trainlist.txt'
         H_dst, W_dst = 256, 448
     elif mode == 'LR':
         img_folder = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet_matlabLRx4/sequences'
         lmdb_save_path = '/home/xtwang/datasets/vimeo90k/vimeo90k_train_LR7frames.lmdb'  # must end with .lmdb
-        txt_file = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet/sep_trainlist_test.txt'
+        txt_file = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet/sep_trainlist.txt'
         H_dst, W_dst = 64, 112
     n_thread = 40
     ########################################################
@@ -65,8 +65,6 @@ def vimeo90k():
             keys.append('{}_{}_{}'.format(folder, sub_folder, j + 1))
     all_img_list = sorted(all_img_list)
     keys = sorted(keys)
-    for k, v in zip(all_img_list, keys):
-        print(k, v)
     if mode == 'GT':  # read the 4th frame only for GT mode
         print('Only keep the 4th frame.')
         all_img_list = [v for v in all_img_list if v.endswith('im4.png')]
