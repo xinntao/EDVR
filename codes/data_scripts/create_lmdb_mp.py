@@ -129,7 +129,8 @@ def REDS():
     key: 000_00000000
     '''
     #### configurations
-    mode = 'train_sharp'  # train_sharp | train_sharp_bicubic
+    mode = 'train_sharp'
+    # train_sharp | train_sharp_bicubic | train_blur_bicubic| train_blur | train_blur_comp
     if mode == 'train_sharp':
         img_folder = '/home/xtwang/datasets/REDS/train_sharp'
         lmdb_save_path = '/home/xtwang/datasets/REDS/train_sharp_wval.lmdb'  # must end with .lmdb
@@ -138,6 +139,18 @@ def REDS():
         img_folder = '/home/xtwang/datasets/REDS/train_sharp_bicubic'
         lmdb_save_path = '/home/xtwang/datasets/REDS/train_sharp_bicubic_wval.lmdb'  # must end with .lmdb
         H_dst, W_dst = 180, 320
+    elif mode == 'train_blur_bicubic':
+        img_folder = '/home/xtwang/datasets/REDS/train_blur_bicubic'
+        lmdb_save_path = '/home/xtwang/datasets/REDS/train_blur_bicubic_wval.lmdb'  # must end with .lmdb
+        H_dst, W_dst = 180, 320
+    elif mode == 'train_blur':
+        img_folder = '/home/xtwang/datasets/REDS/train_blur'
+        lmdb_save_path = '/home/xtwang/datasets/REDS/train_blur_wval.lmdb'  # must end with .lmdb
+        H_dst, W_dst = 720, 1280
+    elif mode == 'train_blur_comp':
+        img_folder = '/home/xtwang/datasets/REDS/train_blur_comp'
+        lmdb_save_path = '/home/xtwang/datasets/REDS/train_blur_comp_wval.lmdb'  # must end with .lmdb
+        H_dst, W_dst = 720, 1280
     n_thread = 40
     ########################################################
     #### whether the lmdb file exist
@@ -214,6 +227,7 @@ def test_lmdb(dataroot, dataset='REDS'):
     meta_info = pickle.load(open(osp.join(dataroot, 'meta_info.pkl'), "rb"))
     print('Name: ', meta_info['name'])
     print('Resolution: ', meta_info['resolution'])
+    print('# keys: ', len(meta_info['keys']))
     keys = meta_info['keys']
     # read one image
     if dataset == 'vimeo90k':
@@ -232,4 +246,4 @@ def test_lmdb(dataroot, dataset='REDS'):
 if __name__ == "__main__":
     # vimeo90k()
     REDS()
-    # test_lmdb('/home/xtwang/datasets/REDS/train_sharp_bicubic_wval.lmdb', 'REDS')
+    # test_lmdb('/home/xtwang/datasets/REDS/train_sharp_wval.lmdb', 'REDS')
