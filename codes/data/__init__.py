@@ -35,6 +35,8 @@ def create_dataset(dataset_opt):
     mode = dataset_opt['mode']
     if mode == 'REDS':
         from data.REDS_dataset import REDSDataset as D
+    elif mode == 'Vimeo90K':
+        from data.Vimeo90K_dataset import Vimeo90KDataset as D
     else:
         raise NotImplementedError('Dataset [{:s}] is not recognized.'.format(mode))
     dataset = D(dataset_opt)
