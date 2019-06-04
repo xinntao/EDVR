@@ -29,9 +29,9 @@ def parse(opt_path, is_train=True):
             dataset['dataroot_GT'] = os.path.expanduser(dataset['dataroot_GT'])
             if dataset['dataroot_GT'].endswith('lmdb'):
                 is_lmdb = True
-        if dataset.get('dataroot_LR', None) is not None:
-            dataset['dataroot_LR'] = os.path.expanduser(dataset['dataroot_LR'])
-            if dataset['dataroot_LR'].endswith('lmdb'):
+        if dataset.get('dataroot_LQ', None) is not None:
+            dataset['dataroot_LQ'] = os.path.expanduser(dataset['dataroot_LQ'])
+            if dataset['dataroot_LQ'].endswith('lmdb'):
                 is_lmdb = True
         dataset['data_type'] = 'lmdb' if is_lmdb else 'img'
         if dataset['mode'].endswith('mc'):  # for memcached
