@@ -5,6 +5,9 @@ from utils import util
 
 opt = {}
 
+#####################
+## REDS
+#####################
 opt['name'] = 'test_REDS'
 opt['dataroot_GT'] = '/home/xtwang/datasets/REDS/train_sharp_wval.lmdb'
 opt['dataroot_LQ'] = '/home/xtwang/datasets/REDS/train_sharp_bicubic_wval.lmdb'
@@ -23,7 +26,28 @@ opt['interval_list'] = [1]
 opt['random_reverse'] = False
 opt['border_mode'] = False
 opt['cache_keys'] = 'REDS_trainval_keys.pkl'
-
+#####################
+## Vimeo90K
+#####################
+opt['name'] = 'test_Vimeo90K'
+opt['dataroot_GT'] = '/home/xtwang/datasets/vimeo90k/vimeo90k_train_GT.lmdb'
+opt['dataroot_LQ'] = '/home/xtwang/datasets/vimeo90k/vimeo90k_train_LR7frames.lmdb'
+opt['mode'] = 'Vimeo90K'
+opt['N_frames'] = 7
+opt['phase'] = 'train'
+opt['use_shuffle'] = True
+opt['n_workers'] = 8
+opt['batch_size'] = 16
+opt['GT_size'] = 256
+opt['LQ_size'] = 64
+opt['scale'] = 4
+opt['use_flip'] = True
+opt['use_rot'] = True
+opt['interval_list'] = [1]
+opt['random_reverse'] = False
+opt['border_mode'] = False
+opt['cache_keys'] = 'Vimeo90K_train_keys.pkl'
+################################################################################
 opt['data_type'] = 'lmdb'  # img | lmdb | mc
 opt['dist'] = False
 opt['gpu_ids'] = [0]
