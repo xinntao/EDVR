@@ -46,12 +46,6 @@ class REDSDataset(data.Dataset):
         else:
             cache_keys = 'REDS_trainval_keys.pkl'
         self.paths_GT = pickle.load(open('./data/{}'.format(cache_keys), 'rb'))
-        # remove the border frames
-        remove_list = []
-        for i in range(self.half_N_frames):
-            remove_list.append('{:08d}'.format(i))
-            remove_list.append('{:08d}'.format(99 - i))
-        self.paths_GT = [v for v in self.paths_GT if v.split('_')[1] not in remove_list]
         # remove the REDS4 for testing
         self.paths_GT = [
             v for v in self.paths_GT if v.split('_')[0] not in ['000', '011', '015', '020']
@@ -118,20 +112,39 @@ class REDSDataset(data.Dataset):
 
         #### determine the neighbor frames
         interval = random.choice(self.interval_list)
-        # ensure not exceeding the borders
-        while (center_frame_idx + self.half_N_frames * interval >
-               99) or (center_frame_idx - self.half_N_frames * interval < 0):
-            center_frame_idx = random.randint(0, 99)
-        # get the neighbor list
-        neighbor_list = list(
-            range(center_frame_idx - self.half_N_frames * interval,
-                  center_frame_idx + self.half_N_frames * interval + 1, interval))
-        name_b = '{:08d}'.format(neighbor_list[self.half_N_frames])
+        if self.opt['border_mode']:
+            direction = 1  # 1: forward; 0: backward
+            N_frames = self.opt['N_frames']
+            if self.random_reverse and random.random() < 0.5:
+                direction = random.choice([0, 1])
+            if center_frame_idx + interval * (N_frames - 1) > 99:
+                direction = 0
+            elif center_frame_idx - interval * (N_frames - 1) < 0:
+                direction = 1
+            # get the neighbor list
+            if direction == 1:
+                neighbor_list = list(
+                    range(center_frame_idx, center_frame_idx + interval * N_frames, interval))
+            else:
+                neighbor_list = list(
+                    range(center_frame_idx, center_frame_idx - interval * N_frames, -interval))
+            name_b = '{:08d}'.format(neighbor_list[0])
+        else:
+            # ensure not exceeding the borders
+            while (center_frame_idx + self.half_N_frames * interval >
+                   99) or (center_frame_idx - self.half_N_frames * interval < 0):
+                center_frame_idx = random.randint(0, 99)
+            # get the neighbor list
+            neighbor_list = list(
+                range(center_frame_idx - self.half_N_frames * interval,
+                      center_frame_idx + self.half_N_frames * interval + 1, interval))
+            if self.random_reverse and random.random() < 0.5:
+                neighbor_list.reverse()
+            name_b = '{:08d}'.format(neighbor_list[self.half_N_frames])
+
         assert len(
             neighbor_list) == self.opt['N_frames'], 'Wrong length of neighbor list: {}'.format(
                 len(neighbor_list))
-        if self.random_reverse and random.random() < 0.5:
-            neighbor_list.reverse()
 
         #### get the GT image (as the center frame)
         if self.data_type == 'mc':
