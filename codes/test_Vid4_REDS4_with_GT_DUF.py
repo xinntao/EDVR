@@ -53,7 +53,7 @@ def main():
 
     # model
     adapt_official = True if 'official' in model_path else False
-    DUF_downsampling = True # True | False
+    DUF_downsampling = True  # True | False
     model = DUF_arch.DUF_52L(adapt_official=adapt_official)
 
     #### dataset
@@ -164,8 +164,6 @@ def main():
         sub_folder_name_l.append(sub_folder_name)
         save_sub_folder = osp.join(save_folder, sub_folder_name)
 
-
-
         if save_imgs:
             util.mkdirs(save_sub_folder)
 
@@ -183,7 +181,7 @@ def main():
         # When using the downsampling in DUF official code, we downsample the HR images
         if DUF_downsampling:
             sub_folder = sub_folder_GT
-            
+
         img_path_l = sorted(glob.glob(sub_folder + '/*'))
         max_idx = len(img_path_l)
 
@@ -261,9 +259,10 @@ def main():
 
         logger.info('Folder {} - Average PSNR: {:.6f} dB for {} frames; '
                     'Center PSNR: {:.6f} dB for {} frames; '
-                    'Border PSNR: {:.6f} dB for {} frames.'.format(
-                        sub_folder_name, avg_psnr, (cal_n_center + cal_n_border), avg_psnr_center,
-                        cal_n_center, avg_psnr_border, cal_n_border))
+                    'Border PSNR: {:.6f} dB for {} frames.'.format(sub_folder_name, avg_psnr,
+                                                                   (cal_n_center + cal_n_border),
+                                                                   avg_psnr_center, cal_n_center,
+                                                                   avg_psnr_border, cal_n_border))
 
         avg_psnr_l.append(avg_psnr)
         avg_psnr_center_l.append(avg_psnr_center)

@@ -60,25 +60,16 @@ class DenseBlock(nn.Module):
         self.conv3d_2 = nn.Conv3d(nf, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad, bias=True)
 
         self.bn3d_3 = nn.BatchNorm3d(nf + ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_3 = nn.Conv3d(nf + ng,
-                                  nf + ng, (1, 1, 1),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 0, 0),
+        self.conv3d_3 = nn.Conv3d(nf + ng, nf + ng, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                   bias=True)
         self.bn3d_4 = nn.BatchNorm3d(nf + ng, eps=1e-3, momentum=1e-3)
         self.conv3d_4 = nn.Conv3d(nf + ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad, bias=True)
 
         self.bn3d_5 = nn.BatchNorm3d(nf + 2 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_5 = nn.Conv3d(nf + 2 * ng,
-                                  nf + 2 * ng, (1, 1, 1),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 0, 0),
-                                  bias=True)
+        self.conv3d_5 = nn.Conv3d(nf + 2 * ng, nf + 2 * ng, (1, 1, 1), stride=(1, 1, 1),
+                                  padding=(0, 0, 0), bias=True)
         self.bn3d_6 = nn.BatchNorm3d(nf + 2 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_6 = nn.Conv3d(nf + 2 * ng,
-                                  ng, (3, 3, 3),
-                                  stride=(1, 1, 1),
-                                  padding=pad,
+        self.conv3d_6 = nn.Conv3d(nf + 2 * ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad,
                                   bias=True)
 
         # initialization
@@ -164,33 +155,18 @@ class DUF_16L(nn.Module):
         self.dense_block_1 = DenseBlock(64, 64 // 2, t_reduce=False)  # 64 + 32 * 3 = 160, T = 7
         self.dense_block_2 = DenseBlock(160, 64 // 2, t_reduce=True)  # 160 + 32 * 3 = 160, T = 1
         self.bn3d_2 = nn.BatchNorm3d(256, eps=1e-3, momentum=1e-3)
-        self.conv3d_2 = nn.Conv3d(256,
-                                  256, (1, 3, 3),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 1, 1),
+        self.conv3d_2 = nn.Conv3d(256, 256, (1, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1),
                                   bias=True)
 
-        self.conv3d_r1 = nn.Conv3d(256,
-                                   256, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_r1 = nn.Conv3d(256, 256, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
-        self.conv3d_r2 = nn.Conv3d(256,
-                                   3 * 16, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_r2 = nn.Conv3d(256, 3 * 16, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
 
-        self.conv3d_f1 = nn.Conv3d(256,
-                                   512, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_f1 = nn.Conv3d(256, 512, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
-        self.conv3d_f2 = nn.Conv3d(512,
-                                   1 * 5 * 5 * 16, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
-                                   bias=True)
+        self.conv3d_f2 = nn.Conv3d(512, 1 * 5 * 5 * 16, (1, 1, 1), stride=(1, 1, 1),
+                                   padding=(0, 0, 0), bias=True)
 
         self.dynamic_filter = DynamicUpsamplingFilter_3C((1, 5, 5))
 
@@ -258,29 +234,17 @@ class DenseBlock_noBN(nn.Module):
             pad = (0, 1, 1)
         else:
             pad = (1, 1, 1)
-        self.conv3d_1 = nn.Conv3d(nf,
-                                  nf, (1, 1, 1),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 0, 0),
+        self.conv3d_1 = nn.Conv3d(nf, nf, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                   bias=False)
         self.conv3d_2 = nn.Conv3d(nf, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad, bias=True)
 
-        self.conv3d_3 = nn.Conv3d(nf + ng,
-                                  nf + ng, (1, 1, 1),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 0, 0),
+        self.conv3d_3 = nn.Conv3d(nf + ng, nf + ng, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                   bias=False)
         self.conv3d_4 = nn.Conv3d(nf + ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad, bias=True)
 
-        self.conv3d_5 = nn.Conv3d(nf + 2 * ng,
-                                  nf + 2 * ng, (1, 1, 1),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 0, 0),
-                                  bias=False)
-        self.conv3d_6 = nn.Conv3d(nf + 2 * ng,
-                                  ng, (3, 3, 3),
-                                  stride=(1, 1, 1),
-                                  padding=pad,
+        self.conv3d_5 = nn.Conv3d(nf + 2 * ng, nf + 2 * ng, (1, 1, 1), stride=(1, 1, 1),
+                                  padding=(0, 0, 0), bias=False)
+        self.conv3d_6 = nn.Conv3d(nf + 2 * ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad,
                                   bias=True)
 
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
@@ -331,33 +295,18 @@ class DUF_16L_noBN(nn.Module):
         self.dense_block_2 = DenseBlock_noBN(160, 64 // 2,
                                              t_reduce=True)  # 160 + 32 * 3 = 160, T = 1
 
-        self.conv3d_2 = nn.Conv3d(256,
-                                  256, (1, 3, 3),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 1, 1),
+        self.conv3d_2 = nn.Conv3d(256, 256, (1, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1),
                                   bias=True)
 
-        self.conv3d_r1 = nn.Conv3d(256,
-                                   256, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_r1 = nn.Conv3d(256, 256, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
-        self.conv3d_r2 = nn.Conv3d(256,
-                                   3 * 16, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_r2 = nn.Conv3d(256, 3 * 16, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
 
-        self.conv3d_f1 = nn.Conv3d(256,
-                                   512, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_f1 = nn.Conv3d(256, 512, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
-        self.conv3d_f2 = nn.Conv3d(512,
-                                   1 * 5 * 5 * 16, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
-                                   bias=True)
+        self.conv3d_f2 = nn.Conv3d(512, 1 * 5 * 5 * 16, (1, 1, 1), stride=(1, 1, 1),
+                                   padding=(0, 0, 0), bias=True)
 
         self.dynamic_filter = DynamicUpsamplingFilter_3C((1, 5, 5))
 
@@ -411,103 +360,58 @@ class DenseBlock_28L_A(nn.Module):
         self.conv3d_2 = nn.Conv3d(nf, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad, bias=True)
 
         self.bn3d_3 = nn.BatchNorm3d(nf + ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_3 = nn.Conv3d(nf + ng,
-                                  nf + ng, (1, 1, 1),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 0, 0),
+        self.conv3d_3 = nn.Conv3d(nf + ng, nf + ng, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                   bias=True)
         self.bn3d_4 = nn.BatchNorm3d(nf + ng, eps=1e-3, momentum=1e-3)
         self.conv3d_4 = nn.Conv3d(nf + ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad, bias=True)
 
         self.bn3d_5 = nn.BatchNorm3d(nf + 2 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_5 = nn.Conv3d(nf + 2 * ng,
-                                  nf + 2 * ng, (1, 1, 1),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 0, 0),
-                                  bias=True)
+        self.conv3d_5 = nn.Conv3d(nf + 2 * ng, nf + 2 * ng, (1, 1, 1), stride=(1, 1, 1),
+                                  padding=(0, 0, 0), bias=True)
         self.bn3d_6 = nn.BatchNorm3d(nf + 2 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_6 = nn.Conv3d(nf + 2 * ng,
-                                  ng, (3, 3, 3),
-                                  stride=(1, 1, 1),
-                                  padding=pad,
+        self.conv3d_6 = nn.Conv3d(nf + 2 * ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad,
                                   bias=True)
 
         self.bn3d_7 = nn.BatchNorm3d(nf + 3 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_7 = nn.Conv3d(nf + 3 * ng,
-                                  nf + 3 * ng, (1, 1, 1),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 0, 0),
-                                  bias=True)
+        self.conv3d_7 = nn.Conv3d(nf + 3 * ng, nf + 3 * ng, (1, 1, 1), stride=(1, 1, 1),
+                                  padding=(0, 0, 0), bias=True)
         self.bn3d_8 = nn.BatchNorm3d(nf + 3 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_8 = nn.Conv3d(nf + 3 * ng,
-                                  ng, (3, 3, 3),
-                                  stride=(1, 1, 1),
-                                  padding=pad,
+        self.conv3d_8 = nn.Conv3d(nf + 3 * ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad,
                                   bias=True)
 
         self.bn3d_9 = nn.BatchNorm3d(nf + 4 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_9 = nn.Conv3d(nf + 4 * ng,
-                                  nf + 4 * ng, (1, 1, 1),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 0, 0),
-                                  bias=True)
+        self.conv3d_9 = nn.Conv3d(nf + 4 * ng, nf + 4 * ng, (1, 1, 1), stride=(1, 1, 1),
+                                  padding=(0, 0, 0), bias=True)
         self.bn3d_10 = nn.BatchNorm3d(nf + 4 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_10 = nn.Conv3d(nf + 4 * ng,
-                                   ng, (3, 3, 3),
-                                   stride=(1, 1, 1),
-                                   padding=pad,
+        self.conv3d_10 = nn.Conv3d(nf + 4 * ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad,
                                    bias=True)
 
         self.bn3d_11 = nn.BatchNorm3d(nf + 5 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_11 = nn.Conv3d(nf + 5 * ng,
-                                   nf + 5 * ng, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
-                                   bias=True)
+        self.conv3d_11 = nn.Conv3d(nf + 5 * ng, nf + 5 * ng, (1, 1, 1), stride=(1, 1, 1),
+                                   padding=(0, 0, 0), bias=True)
         self.bn3d_12 = nn.BatchNorm3d(nf + 5 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_12 = nn.Conv3d(nf + 5 * ng,
-                                   ng, (3, 3, 3),
-                                   stride=(1, 1, 1),
-                                   padding=pad,
+        self.conv3d_12 = nn.Conv3d(nf + 5 * ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad,
                                    bias=True)
 
         self.bn3d_13 = nn.BatchNorm3d(nf + 6 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_13 = nn.Conv3d(nf + 6 * ng,
-                                   nf + 6 * ng, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
-                                   bias=True)
+        self.conv3d_13 = nn.Conv3d(nf + 6 * ng, nf + 6 * ng, (1, 1, 1), stride=(1, 1, 1),
+                                   padding=(0, 0, 0), bias=True)
         self.bn3d_14 = nn.BatchNorm3d(nf + 6 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_14 = nn.Conv3d(nf + 6 * ng,
-                                   ng, (3, 3, 3),
-                                   stride=(1, 1, 1),
-                                   padding=pad,
+        self.conv3d_14 = nn.Conv3d(nf + 6 * ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad,
                                    bias=True)
 
         self.bn3d_15 = nn.BatchNorm3d(nf + 7 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_15 = nn.Conv3d(nf + 7 * ng,
-                                   nf + 7 * ng, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
-                                   bias=True)
+        self.conv3d_15 = nn.Conv3d(nf + 7 * ng, nf + 7 * ng, (1, 1, 1), stride=(1, 1, 1),
+                                   padding=(0, 0, 0), bias=True)
         self.bn3d_16 = nn.BatchNorm3d(nf + 7 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_16 = nn.Conv3d(nf + 7 * ng,
-                                   ng, (3, 3, 3),
-                                   stride=(1, 1, 1),
-                                   padding=pad,
+        self.conv3d_16 = nn.Conv3d(nf + 7 * ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad,
                                    bias=True)
 
         self.bn3d_17 = nn.BatchNorm3d(nf + 8 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_17 = nn.Conv3d(nf + 8 * ng,
-                                   nf + 8 * ng, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
-                                   bias=True)
+        self.conv3d_17 = nn.Conv3d(nf + 8 * ng, nf + 8 * ng, (1, 1, 1), stride=(1, 1, 1),
+                                   padding=(0, 0, 0), bias=True)
         self.bn3d_18 = nn.BatchNorm3d(nf + 8 * ng, eps=1e-3, momentum=1e-3)
-        self.conv3d_18 = nn.Conv3d(nf + 8 * ng,
-                                   ng, (3, 3, 3),
-                                   stride=(1, 1, 1),
-                                   padding=pad,
+        self.conv3d_18 = nn.Conv3d(nf + 8 * ng, ng, (3, 3, 3), stride=(1, 1, 1), padding=pad,
                                    bias=True)
 
         # initialization
@@ -600,33 +504,18 @@ class DUF_28L(nn.Module):
         self.dense_block_1 = DenseBlock_28L_A(64, 16)  # 64 + 16 * 9 = 208, T = 7
         self.dense_block_2 = DenseBlock(208, 16, t_reduce=True)  # 160 + 16 * 3 = 256, T = 1
         self.bn3d_2 = nn.BatchNorm3d(256, eps=1e-3, momentum=1e-3)
-        self.conv3d_2 = nn.Conv3d(256,
-                                  256, (1, 3, 3),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 1, 1),
+        self.conv3d_2 = nn.Conv3d(256, 256, (1, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1),
                                   bias=True)
 
-        self.conv3d_r1 = nn.Conv3d(256,
-                                   256, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_r1 = nn.Conv3d(256, 256, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
-        self.conv3d_r2 = nn.Conv3d(256,
-                                   3 * 16, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_r2 = nn.Conv3d(256, 3 * 16, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
 
-        self.conv3d_f1 = nn.Conv3d(256,
-                                   512, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_f1 = nn.Conv3d(256, 512, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
-        self.conv3d_f2 = nn.Conv3d(512,
-                                   1 * 5 * 5 * 16, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
-                                   bias=True)
+        self.conv3d_f2 = nn.Conv3d(512, 1 * 5 * 5 * 16, (1, 1, 1), stride=(1, 1, 1),
+                                   padding=(0, 0, 0), bias=True)
 
         self.dynamic_filter = DynamicUpsamplingFilter_3C((1, 5, 5))
 
@@ -693,10 +582,7 @@ class DenseBlock_52L_A(nn.Module):
             dense_block_l.append(nn.BatchNorm3d(nf + i * ng, eps=1e-3, momentum=1e-3))
             dense_block_l.append(nn.ReLU())
             dense_block_l.append(
-                nn.Conv3d(nf + i * ng,
-                          nf + i * ng, (1, 1, 1),
-                          stride=(1, 1, 1),
-                          padding=(0, 0, 0),
+                nn.Conv3d(nf + i * ng, nf + i * ng, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                           bias=True))
 
             dense_block_l.append(nn.BatchNorm3d(nf + i * ng, eps=1e-3, momentum=1e-3))
@@ -730,33 +616,18 @@ class DUF_52L(nn.Module):
         self.dense_block_2 = DenseBlock(400, 16, t_reduce=True)  # 400 + 16 * 3 = 448, T = 1
 
         self.bn3d_2 = nn.BatchNorm3d(448, eps=1e-3, momentum=1e-3)
-        self.conv3d_2 = nn.Conv3d(448,
-                                  256, (1, 3, 3),
-                                  stride=(1, 1, 1),
-                                  padding=(0, 1, 1),
+        self.conv3d_2 = nn.Conv3d(448, 256, (1, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1),
                                   bias=True)
 
-        self.conv3d_r1 = nn.Conv3d(256,
-                                   256, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_r1 = nn.Conv3d(256, 256, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
-        self.conv3d_r2 = nn.Conv3d(256,
-                                   3 * 16, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_r2 = nn.Conv3d(256, 3 * 16, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
 
-        self.conv3d_f1 = nn.Conv3d(256,
-                                   512, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
+        self.conv3d_f1 = nn.Conv3d(256, 512, (1, 1, 1), stride=(1, 1, 1), padding=(0, 0, 0),
                                    bias=True)
-        self.conv3d_f2 = nn.Conv3d(512,
-                                   1 * 5 * 5 * 16, (1, 1, 1),
-                                   stride=(1, 1, 1),
-                                   padding=(0, 0, 0),
-                                   bias=True)
+        self.conv3d_f2 = nn.Conv3d(512, 1 * 5 * 5 * 16, (1, 1, 1), stride=(1, 1, 1),
+                                   padding=(0, 0, 0), bias=True)
 
         self.dynamic_filter = DynamicUpsamplingFilter_3C((1, 5, 5))
 

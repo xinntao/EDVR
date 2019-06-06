@@ -125,6 +125,7 @@ def tensor2img(tensor, out_type=np.uint8, min_max=(0, 1)):
 def save_img(img, img_path, mode='RGB'):
     cv2.imwrite(img_path, img)
 
+
 # Gaussian kernel for downsampling used in DUF official code
 def DUF_DownSample(x, scale=4):
     # x: torch, (B, N, C, H, W)
