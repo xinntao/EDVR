@@ -125,6 +125,45 @@ def tensor2img(tensor, out_type=np.uint8, min_max=(0, 1)):
 def save_img(img, img_path, mode='RGB'):
     cv2.imwrite(img_path, img)
 
+# Gaussian kernel for downsampling used in DUF official code
+def DUF_DownSample(x, scale=4):
+    # x: torch, (B, N, C, H, W)
+
+    assert scale == 4, 'Only scale = 4 is supported'
+
+    def gkern(kernlen=13, nsig=1.6):
+        import scipy.ndimage.filters as fi
+        # create nxn zeros
+        inp = np.zeros((kernlen, kernlen))
+        # set element at the middle to one, a dirac delta
+        inp[kernlen // 2, kernlen // 2] = 1
+        # gaussian-smooth the dirac, resulting in a gaussian filter mask
+        return fi.gaussian_filter(inp, nsig)
+
+    B, N, C, H, W = x.size()
+    x = x.view(-1, 1, H, W)
+
+    h = gkern(13, 1.6)
+
+    filter_height, filter_width = 13, 13
+    pad_height = filter_height - 1
+    pad_width = filter_width - 1
+
+    pad_top = pad_height // 2
+    pad_bottom = pad_height - pad_top
+    pad_left = pad_width // 2
+    pad_right = pad_width - pad_left
+    pad_array = [pad_left, pad_right, pad_top, pad_bottom]
+
+    x = F.pad(x, [14, 14, 14, 14], 'reflect')
+    h = torch.from_numpy(h).type(torch.FloatTensor).cuda()
+    h = h.unsqueeze(0).unsqueeze(0)
+    x = F.conv2d(x, h, stride=scale)
+
+    x = x[:, :, 2:-2, 2:-2]
+    x = x.view(B, N, C, H // scale, W // scale)
+    return x
+
 
 ####################
 # metric
