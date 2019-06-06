@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import math
+import torch.nn.functional as F
 from datetime import datetime
 import random
 import logging
@@ -145,16 +146,6 @@ def DUF_DownSample(x, scale=4):
     x = x.view(-1, 1, H, W)
 
     h = gkern(13, 1.6)
-
-    filter_height, filter_width = 13, 13
-    pad_height = filter_height - 1
-    pad_width = filter_width - 1
-
-    pad_top = pad_height // 2
-    pad_bottom = pad_height - pad_top
-    pad_left = pad_width // 2
-    pad_right = pad_width - pad_left
-    pad_array = [pad_left, pad_right, pad_top, pad_bottom]
 
     x = F.pad(x, [14, 14, 14, 14], 'reflect')
     h = torch.from_numpy(h).type(torch.FloatTensor).cuda()

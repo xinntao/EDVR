@@ -1,12 +1,12 @@
 '''Network architecture for DUF:
 Deep Video Super-Resolution Network Using Dynamic Upsampling Filters
 Without Explicit Motion Compensation (CVPR18)
-'''
-'''
+=======
 For all the models below, [adapt_official] is only necessary when
 loading the weights converted from the official TensorFlow weights.
 Please set it to [False] if you are training the model from scratch.
 '''
+
 import math
 import numpy as np
 import torch
@@ -201,7 +201,7 @@ class DUF_16L(nn.Module):
         Rx = self.conv3d_r2(F.relu(self.conv3d_r1(x), inplace=True))  # [B, 3*16, 1, H, W]
 
         # filter
-        Fx = self.conv3d_f2(F.relu(self.conv3d_f1(x), inplace=True))  #[B, 25*16, 1, H, W]
+        Fx = self.conv3d_f2(F.relu(self.conv3d_f1(x), inplace=True))  # [B, 25*16, 1, H, W]
         Fx = F.softmax(Fx.view(B, 25, 16, H, W), dim=1)
 
         # Adapt to official model weights
@@ -337,7 +337,7 @@ class DUF_16L_noBN(nn.Module):
         # image residual
         Rx = self.conv3d_r2(self.lrelu(self.conv3d_r1(x)))  # [B, 3*16, 1, H, W]
         # filter
-        Fx = self.conv3d_f2(self.lrelu(self.conv3d_f1(x)))  #[B, 25*16, 1, H, W]
+        Fx = self.conv3d_f2(self.lrelu(self.conv3d_f1(x)))  # [B, 25*16, 1, H, W]
         Fx = F.softmax(Fx.view(B, 25, 16, H, W), dim=1)
 
         # dynamic filter
@@ -548,7 +548,7 @@ class DUF_28L(nn.Module):
         # image residual
         Rx = self.conv3d_r2(F.relu(self.conv3d_r1(x), inplace=True))  # [B, 3*16, 1, H, W]
         # filter
-        Fx = self.conv3d_f2(F.relu(self.conv3d_f1(x), inplace=True))  #[B, 25*16, 1, H, W]
+        Fx = self.conv3d_f2(F.relu(self.conv3d_f1(x), inplace=True))  # [B, 25*16, 1, H, W]
         Fx = F.softmax(Fx.view(B, 25, 16, H, W), dim=1)
 
         # Adapt to official model weights
@@ -661,7 +661,7 @@ class DUF_52L(nn.Module):
         Rx = self.conv3d_r2(F.relu(self.conv3d_r1(x), inplace=True))  # [B, 3*16, 1, H, W]
 
         # filter
-        Fx = self.conv3d_f2(F.relu(self.conv3d_f1(x), inplace=True))  #[B, 25*16, 1, H, W]
+        Fx = self.conv3d_f2(F.relu(self.conv3d_f1(x), inplace=True))  # [B, 25*16, 1, H, W]
         Fx = F.softmax(Fx.view(B, 25, 16, H, W), dim=1)
 
         # Adapt to official model weights

@@ -1,5 +1,5 @@
 '''
-test Vid4 (SR) and REDS4 (SR-clean, SR-blur, deblur-clean, deblur-compression) datasets
+test Vid4 (SR) and REDS4 (SR-clean) datasets, for DUF
 write to txt log file
 '''
 
@@ -13,7 +13,7 @@ import torch
 
 import utils.util as util
 import data.util as data_util
-import models.modules.EDVR_arch as EDVR_arch
+import models.modules.DUF_arch as DUF_arch
 
 
 def main():
@@ -21,35 +21,23 @@ def main():
     # configurations
     #################
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    data_mode = 'Vid4'  # Vid4 | sharp_bicubic | blur_bicubic | blur | blur_comp
+    data_mode = 'Vid4'  # Vid4 | sharp_bicubic
     # Vid4: SR
     # REDS4: sharp_bicubic (SR-clean), blur_bicubic (SR-blur);
     #        blur (deblur-clean), blur_comp (deblur-compression).
 
     #### model
     if data_mode == 'Vid4':
-        model_path = '../experiments/pretrained_models/DUF_16L_official.pth'
-        model_path = '../experiments/pretrained_models/DUF_28L_official.pth'
+        # model_path = '../experiments/pretrained_models/DUF_16L_official.pth'
+        # model_path = '../experiments/pretrained_models/DUF_28L_official.pth'
         model_path = '../experiments/pretrained_models/DUF_52L_official.pth'
     elif data_mode == 'sharp_bicubic':
-        model_path = '../experiments/pretrained_models/DUF_16L_official.pth'
-        model_path = '../experiments/pretrained_models/DUF_28L_official.pth'
+        # model_path = '../experiments/pretrained_models/DUF_16L_official.pth'
+        # model_path = '../experiments/pretrained_models/DUF_28L_official.pth'
         model_path = '../experiments/pretrained_models/DUF_52L_official.pth'
-    # elif data_mode == 'blur_bicubic':
-    #     model_path = '../experiments/pretrained_models/EDVR_REDS_SRblur_L.pth'
-    # elif data_mode == 'blur':
-    #     model_path = '../experiments/pretrained_models/EDVR_REDS_deblur_L.pth'
-    # elif data_mode == 'blur_comp':
-    #     model_path = '../experiments/pretrained_models/EDVR_REDS_deblurcomp_L.pth'
     else:
         raise NotImplementedError
     N_in = 7
-
-    predeblur, HR_in = False, False
-    if data_mode == 'blur_bicubic':
-        predeblur = True
-    if data_mode == 'blur' or data_mode == 'blur_comp':
-        predeblur, HR_in = True, True
 
     # model
     adapt_official = True if 'official' in model_path else False
@@ -64,7 +52,7 @@ def main():
 
     #### evaluation
     flip_test = False
-    crop_border = 0
+    crop_border = 8
     border_frame = N_in // 2  # border frames when evaluate
     # temporal padding mode
     if data_mode == 'Vid4' or data_mode == 'sharp_bicubic':
@@ -164,6 +152,9 @@ def main():
         sub_folder_name_l.append(sub_folder_name)
         save_sub_folder = osp.join(save_folder, sub_folder_name)
 
+        img_path_l = sorted(glob.glob(sub_folder + '/*'))
+        max_idx = len(img_path_l)
+
         if save_imgs:
             util.mkdirs(save_sub_folder)
 
@@ -181,9 +172,9 @@ def main():
         # When using the downsampling in DUF official code, we downsample the HR images
         if DUF_downsampling:
             sub_folder = sub_folder_GT
-
-        img_path_l = sorted(glob.glob(sub_folder + '/*'))
-        max_idx = len(img_path_l)
+            img_path_l = sorted(glob.glob(sub_folder))
+            max_idx = len(img_path_l)
+            imgs = read_seq_imgs(sub_folder[:-2])
 
         avg_psnr, avg_psnr_border, avg_psnr_center = 0, 0, 0
         cal_n_border, cal_n_center = 0, 0
