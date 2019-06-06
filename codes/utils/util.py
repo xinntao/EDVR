@@ -75,19 +75,19 @@ def set_random_seed(seed):
 
 def setup_logger(logger_name, root, phase, level=logging.INFO, screen=False, tofile=False):
     '''set up logger'''
-    l = logging.getLogger(logger_name)
+    lg = logging.getLogger(logger_name)
     formatter = logging.Formatter('%(asctime)s.%(msecs)03d - %(levelname)s: %(message)s',
                                   datefmt='%y-%m-%d %H:%M:%S')
-    l.setLevel(level)
+    lg.setLevel(level)
     if tofile:
         log_file = os.path.join(root, phase + '_{}.log'.format(get_timestamp()))
         fh = logging.FileHandler(log_file, mode='w')
         fh.setFormatter(formatter)
-        l.addHandler(fh)
+        lg.addHandler(fh)
     if screen:
         sh = logging.StreamHandler()
         sh.setFormatter(formatter)
-        l.addHandler(sh)
+        lg.addHandler(sh)
 
 
 ####################
