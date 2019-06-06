@@ -1,9 +1,7 @@
 import os
 import pickle
 import random
-import logging
 import numpy as np
-import lmdb
 import cv2
 
 ####################
@@ -96,9 +94,12 @@ def augment(img_list, hflip=True, rot=True):
     rot90 = rot and random.random() < 0.5
 
     def _augment(img):
-        if hflip: img = img[:, ::-1, :]
-        if vflip: img = img[::-1, :, :]
-        if rot90: img = img.transpose(1, 0, 2)
+        if hflip:
+            img = img[:, ::-1, :]
+        if vflip:
+            img = img[::-1, :, :]
+        if rot90:
+            img = img.transpose(1, 0, 2)
         return img
 
     return [_augment(img) for img in img_list]
@@ -111,9 +112,12 @@ def augment_flow(img_list, flow_list, hflip=True, rot=True):
     rot90 = rot and random.random() < 0.5
 
     def _augment(img):
-        if hflip: img = img[:, ::-1, :]
-        if vflip: img = img[::-1, :, :]
-        if rot90: img = img.transpose(1, 0, 2)
+        if hflip:
+            img = img[:, ::-1, :]
+        if vflip:
+            img = img[::-1, :, :]
+        if rot90:
+            img = img.transpose(1, 0, 2)
         return img
 
     def _augment_flow(flow):
