@@ -244,9 +244,10 @@ def main():
 
         logger.info('Folder {} - Average PSNR: {:.6f} dB for {} frames; '
                     'Center PSNR: {:.6f} dB for {} frames; '
-                    'Border PSNR: {:.6f} dB for {} frames.'.format(
-                        sub_folder_name, avg_psnr, (cal_n_center + cal_n_border), avg_psnr_center,
-                        cal_n_center, avg_psnr_border, cal_n_border))
+                    'Border PSNR: {:.6f} dB for {} frames.'.format(sub_folder_name, avg_psnr,
+                                                                   (cal_n_center + cal_n_border),
+                                                                   avg_psnr_center, cal_n_center,
+                                                                   avg_psnr_border, cal_n_border))
 
         avg_psnr_l.append(avg_psnr)
         avg_psnr_center_l.append(avg_psnr_center)

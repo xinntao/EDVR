@@ -51,13 +51,7 @@ dcn_v2_conv = _DCNv2.apply
 
 
 class DCNv2(nn.Module):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 stride,
-                 padding,
-                 dilation=1,
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation=1,
                  deformable_groups=1):
         super(DCNv2, self).__init__()
         self.in_channels = in_channels
@@ -90,25 +84,14 @@ class DCNv2(nn.Module):
 
 
 class DCN(DCNv2):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 stride,
-                 padding,
-                 dilation=1,
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation=1,
                  deformable_groups=1):
         super(DCN, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation,
                                   deformable_groups)
 
         channels_ = self.deformable_groups * 3 * self.kernel_size[0] * self.kernel_size[1]
-        self.conv_offset_mask = nn.Conv2d(
-            self.in_channels,
-            channels_,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            bias=True)
+        self.conv_offset_mask = nn.Conv2d(self.in_channels, channels_, kernel_size=self.kernel_size,
+                                          stride=self.stride, padding=self.padding, bias=True)
         self.init_offset()
 
     def init_offset(self):
@@ -127,25 +110,14 @@ class DCN(DCNv2):
 class DCN_sep(DCNv2):
     '''Use other features to generate offsets and masks'''
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 stride,
-                 padding,
-                 dilation=1,
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation=1,
                  deformable_groups=1):
         super(DCN_sep, self).__init__(in_channels, out_channels, kernel_size, stride, padding,
                                       dilation, deformable_groups)
 
         channels_ = self.deformable_groups * 3 * self.kernel_size[0] * self.kernel_size[1]
-        self.conv_offset_mask = nn.Conv2d(
-            self.in_channels,
-            channels_,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            bias=True)
+        self.conv_offset_mask = nn.Conv2d(self.in_channels, channels_, kernel_size=self.kernel_size,
+                                          stride=self.stride, padding=self.padding, bias=True)
         self.init_offset()
 
     def init_offset(self):
@@ -170,18 +142,8 @@ class DCN_sep(DCNv2):
 
 class _DCNv2Pooling(Function):
     @staticmethod
-    def forward(ctx,
-                input,
-                rois,
-                offset,
-                spatial_scale,
-                pooled_size,
-                output_dim,
-                no_trans,
-                group_size=1,
-                part_size=None,
-                sample_per_part=4,
-                trans_std=.0):
+    def forward(ctx, input, rois, offset, spatial_scale, pooled_size, output_dim, no_trans,
+                group_size=1, part_size=None, sample_per_part=4, trans_std=.0):
         ctx.spatial_scale = spatial_scale
         ctx.no_trans = int(no_trans)
         ctx.output_dim = output_dim
@@ -227,15 +189,8 @@ dcn_v2_pooling = _DCNv2Pooling.apply
 
 
 class DCNv2Pooling(nn.Module):
-    def __init__(self,
-                 spatial_scale,
-                 pooled_size,
-                 output_dim,
-                 no_trans,
-                 group_size=1,
-                 part_size=None,
-                 sample_per_part=4,
-                 trans_std=.0):
+    def __init__(self, spatial_scale, pooled_size, output_dim, no_trans, group_size=1,
+                 part_size=None, sample_per_part=4, trans_std=.0):
         super(DCNv2Pooling, self).__init__()
         self.spatial_scale = spatial_scale
         self.pooled_size = pooled_size
@@ -256,16 +211,8 @@ class DCNv2Pooling(nn.Module):
 
 
 class DCNPooling(DCNv2Pooling):
-    def __init__(self,
-                 spatial_scale,
-                 pooled_size,
-                 output_dim,
-                 no_trans,
-                 group_size=1,
-                 part_size=None,
-                 sample_per_part=4,
-                 trans_std=.0,
-                 deform_fc_dim=1024):
+    def __init__(self, spatial_scale, pooled_size, output_dim, no_trans, group_size=1,
+                 part_size=None, sample_per_part=4, trans_std=.0, deform_fc_dim=1024):
         super(DCNPooling, self).__init__(spatial_scale, pooled_size, output_dim, no_trans,
                                          group_size, part_size, sample_per_part, trans_std)
 
