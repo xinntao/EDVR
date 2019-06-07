@@ -22,27 +22,23 @@ def main():
     #################
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     data_mode = 'Vid4'  # Vid4 | sharp_bicubic
+
+    # Possible combinations: (2, 16), (3, 16), (4, 16), (4, 28), (4, 52)
+    scale = 2
+    layer = 16
+
     # Vid4: SR
     # REDS4: sharp_bicubic (SR-clean), blur_bicubic (SR-blur);
     #        blur (deblur-clean), blur_comp (deblur-compression).
 
     #### model
-    if data_mode == 'Vid4':
-        # model_path = '../experiments/pretrained_models/DUF_16L_official.pth'
-        # model_path = '../experiments/pretrained_models/DUF_28L_official.pth'
-        model_path = '../experiments/pretrained_models/DUF_52L_official.pth'
-    elif data_mode == 'sharp_bicubic':
-        # model_path = '../experiments/pretrained_models/DUF_16L_official.pth'
-        # model_path = '../experiments/pretrained_models/DUF_28L_official.pth'
-        model_path = '../experiments/pretrained_models/DUF_52L_official.pth'
-    else:
-        raise NotImplementedError
+    model_path = '../experiments/pretrained_models/DUF_x{}_{}}L_official.pth'.format(scale, layer)
     N_in = 7
 
     # model
     adapt_official = True if 'official' in model_path else False
     DUF_downsampling = True  # True | False
-    model = DUF_arch.DUF_52L(adapt_official=adapt_official)
+    model = DUF_arch.DUF_16L(scale=scale, adapt_official=adapt_official)
 
     #### dataset
     if data_mode == 'Vid4':
@@ -187,10 +183,20 @@ def main():
             imgs_in = imgs.index_select(0, torch.LongTensor(select_idx)).unsqueeze(0).to(device)
 
             # Downsample the HR images
+            H, W = imgs_in.size(3), imgs_in.size(4)
             if DUF_downsampling:
-                imgs_in = util.DUF_DownSample(imgs_in)
+                imgs_in = util.DUF_DownSample(imgs_in, scale=scale)
 
             output = single_forward(model, imgs_in)
+
+            # Crop to the original shape
+            if scale == 3:
+                pad_h = 3 - (H % 3)
+                pad_w = 3 - (W % 3)
+                if pad_h > 0:
+                    output = output[:, :, :-pad_h, :]
+                if pad_w > 0:
+                    output = output[:, :, :, :-pad_w]
             output_f = output.data.float().cpu().squeeze(0)
 
             if flip_test:

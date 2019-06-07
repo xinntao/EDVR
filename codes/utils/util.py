@@ -129,9 +129,12 @@ def save_img(img, img_path, mode='RGB'):
 
 # Gaussian kernel for downsampling used in DUF official code
 def DUF_DownSample(x, scale=4):
-    # x: torch, (B, N, C, H, W)
+    '''
+    x: frames to be downsampled - Tensor, [B, T, C, H, W]
+    scale: downsampling factor - either 2,3, or 4
+    '''
 
-    assert scale == 4, 'Only scale = 4 is supported'
+    assert scale in [2, 3, 4], 'scale [{}] is not recognized'.format(scale)
 
     def gkern(kernlen=13, nsig=1.6):
         import scipy.ndimage.filters as fi
@@ -142,18 +145,25 @@ def DUF_DownSample(x, scale=4):
         # gaussian-smooth the dirac, resulting in a gaussian filter mask
         return fi.gaussian_filter(inp, nsig)
 
-    B, N, C, H, W = x.size()
+    h = gkern(13, 0.4 * scale)
+
+    B, T, C, H, W = x.size()
     x = x.view(-1, 1, H, W)
 
-    h = gkern(13, 1.6)
-
-    x = F.pad(x, [14, 14, 14, 14], 'reflect')
+    pad_w = 6 + scale * 2  # 6 is the pad of the gaussian filter
+    pad_h = 6 + scale * 2
+    r_h = 0
+    r_w = 0
+    if scale == 3:
+        r_h = 3 - (H % 3)
+        r_w = 3 - (W % 3)
+    x = F.pad(x, [pad_w, pad_w + r_w, pad_h, pad_h + r_h], 'reflect')
     h = torch.from_numpy(h).type(torch.FloatTensor).cuda()
     h = h.unsqueeze(0).unsqueeze(0)
     x = F.conv2d(x, h, stride=scale)
 
     x = x[:, :, 2:-2, 2:-2]
-    x = x.view(B, N, C, H // scale, W // scale)
+    x = x.view(B, N, C, x.size(2), x.size(3))
     return x
 
 
