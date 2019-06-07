@@ -2,7 +2,7 @@
 Deep Video Super-Resolution Network Using Dynamic Upsampling Filters
 Without Explicit Motion Compensation (CVPR18)
 https://github.com/yhjo09/VSR-DUF
-=======
+
 For all the models below, [adapt_official] is only necessary when
 loading the weights converted from the official TensorFlow weights.
 Please set it to [False] if you are training the model from scratch.
@@ -150,7 +150,7 @@ class DUF_16L(nn.Module):
         Rx: [B, 3*16, 1, H, W]
         '''
         B, T, C, H, W = x.size()
-        x = x.permute(0, 2, 1, 3, 4)  # [B,C,T,H,W] for Conv3D
+        x = x.permute(0, 2, 1, 3, 4)  # [B, C, T, H, W] for Conv3D
         x_center = x[:, :, T // 2, :, :]
 
         x = self.conv3d_1(x)

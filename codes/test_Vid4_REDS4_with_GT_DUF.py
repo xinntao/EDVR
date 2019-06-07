@@ -1,7 +1,7 @@
-'''
-test Vid4 (SR) and REDS4 (SR-clean) datasets, for DUF
+"""
+DUF testing script, test Vid4 (SR) and REDS4 (SR-clean) datasets
 write to txt log file
-'''
+"""
 
 import os
 import os.path as osp
@@ -21,11 +21,11 @@ def main():
     # configurations
     #################
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    data_mode = 'Vid4'  # Vid4 | sharp_bicubic
+    data_mode = 'Vid4'  # Vid4 | sharp_bicubic (REDS)
 
     # Possible combinations: (2, 16), (3, 16), (4, 16), (4, 28), (4, 52)
     scale = 4
-    layer = 16
+    layer = 52
     assert (scale, layer) in [(2, 16), (3, 16), (4, 16), (4, 28),
                               (4, 52)], 'Unrecognized (scale, layer) combination'
 
@@ -41,25 +41,17 @@ def main():
     elif layer == 52:
         model = DUF_arch.DUF_52L(scale=scale, adapt_official=adapt_official)
 
-    # Vid4: SR
-    # REDS4: sharp_bicubic (SR-clean), blur_bicubic (SR-blur);
-    #        blur (deblur-clean), blur_comp (deblur-compression).
-
     #### dataset
     if data_mode == 'Vid4':
         test_dataset_folder = '../datasets/Vid4/BIx4/*'
-    else:
+    else:  # sharp_bicubic (REDS)
         test_dataset_folder = '../datasets/REDS4/{}/*'.format(data_mode)
 
     #### evaluation
-    flip_test = False
     crop_border = 8
     border_frame = N_in // 2  # border frames when evaluate
     # temporal padding mode
-    if data_mode == 'Vid4' or data_mode == 'sharp_bicubic':
-        padding = 'new_info'
-    else:
-        padding = 'replicate'
+    padding = 'replicate'  # different from the official testing codes, which pads zeros.
     save_imgs = True
     ############################################################################
     device = torch.device('cuda')
@@ -73,7 +65,6 @@ def main():
     logger.info('Padding mode: {}'.format(padding))
     logger.info('Model path: {}'.format(model_path))
     logger.info('Save images: {}'.format(save_imgs))
-    logger.info('Flip Test: {}'.format(flip_test))
 
     def read_image(img_path):
         '''read one image from img_path
@@ -190,7 +181,7 @@ def main():
             # Downsample the HR images
             H, W = imgs_in.size(3), imgs_in.size(4)
             if DUF_downsampling:
-                imgs_in = util.DUF_DownSample(imgs_in, scale=scale)
+                imgs_in = util.DUF_downsample(imgs_in, scale=scale)
 
             output = single_forward(model, imgs_in)
 
@@ -203,25 +194,6 @@ def main():
                 if pad_w > 0:
                     output = output[:, :, :, :-pad_w]
             output_f = output.data.float().cpu().squeeze(0)
-
-            if flip_test:
-                # flip W
-                output = single_forward(model, torch.flip(imgs_in, (-1, )))
-                output = torch.flip(output, (-1, ))
-                output = output.data.float().cpu().squeeze(0)
-                output_f = output_f + output
-                # flip H
-                output = single_forward(model, torch.flip(imgs_in, (-2, )))
-                output = torch.flip(output, (-2, ))
-                output = output.data.float().cpu().squeeze(0)
-                output_f = output_f + output
-                # flip both H and W
-                output = single_forward(model, torch.flip(imgs_in, (-2, -1)))
-                output = torch.flip(output, (-2, -1))
-                output = output.data.float().cpu().squeeze(0)
-                output_f = output_f + output
-
-                output_f = output_f / 4
 
             output = util.tensor2img(output_f)
 
@@ -281,7 +253,6 @@ def main():
     logger.info('Padding mode: {}'.format(padding))
     logger.info('Model path: {}'.format(model_path))
     logger.info('Save images: {}'.format(save_imgs))
-    logger.info('Flip Test: {}'.format(flip_test))
     logger.info('Total Average PSNR: {:.6f} dB for {} clips. '
                 'Center PSNR: {:.6f} dB. Border PSNR: {:.6f} dB.'.format(
                     sum(avg_psnr_l) / len(avg_psnr_l), len(sub_folder_l),
