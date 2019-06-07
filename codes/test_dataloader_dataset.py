@@ -72,11 +72,7 @@ for i, data in enumerate(train_loader):
 
     # save LQ images
     for j in range(LQs.size(1)):
-        torchvision.utils.save_image(
-            LQs[:, j, :, :, :],
-            'tmp/LQ_{:03d}_{}.png'.format(i, j),
-            nrow=nrow,
-            padding=padding,
-            normalize=False)
-    torchvision.utils.save_image(
-        GT, 'tmp/GT_{:03d}.png'.format(i), nrow=nrow, padding=padding, normalize=False)
+        torchvision.utils.save_image(LQs[:, j, :, :, :], 'tmp/LQ_{:03d}_{}.png'.format(i, j),
+                                     nrow=nrow, padding=padding, normalize=False)
+    torchvision.utils.save_image(GT, 'tmp/GT_{:03d}.png'.format(i), nrow=nrow, padding=padding,
+                                 normalize=False)

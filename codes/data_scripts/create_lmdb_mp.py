@@ -9,10 +9,10 @@ from multiprocessing import Pool
 import numpy as np
 import lmdb
 import cv2
-
-sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
 import data.util as data_util
 import utils.util as util
+
+sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
 
 
 def reading_image_worker(path, key):
@@ -34,16 +34,18 @@ def vimeo90k():
     mode = 'GT'  # GT | LR
     if mode == 'GT':
         img_folder = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet/sequences'
-        lmdb_save_path = '/home/xtwang/datasets/vimeo90k/vimeo90k_train_GT.lmdb'  # must end with .lmdb
+        lmdb_save_path = '/home/xtwang/datasets/vimeo90k/vimeo90k_train_GT.lmdb'
         txt_file = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet/sep_trainlist.txt'
         H_dst, W_dst = 256, 448
     elif mode == 'LR':
         img_folder = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet_matlabLRx4/sequences'
-        lmdb_save_path = '/home/xtwang/datasets/vimeo90k/vimeo90k_train_LR7frames.lmdb'  # must end with .lmdb
+        lmdb_save_path = '/home/xtwang/datasets/vimeo90k/vimeo90k_train_LR7frames.lmdb'
         txt_file = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet/sep_trainlist.txt'
         H_dst, W_dst = 64, 112
     n_thread = 40
     ########################################################
+    if not lmdb_save_path.endswith('.lmdb'):
+        raise ValueError("lmdb_save_path must end with \'lmdb\'.")
     #### whether the lmdb file exist
     if osp.exists(lmdb_save_path):
         print('Folder [{:s}] already exists. Exit...'.format(lmdb_save_path))
@@ -133,26 +135,28 @@ def REDS():
     # train_sharp | train_sharp_bicubic | train_blur_bicubic| train_blur | train_blur_comp
     if mode == 'train_sharp':
         img_folder = '/home/xtwang/datasets/REDS/train_sharp'
-        lmdb_save_path = '/home/xtwang/datasets/REDS/train_sharp_wval.lmdb'  # must end with .lmdb
+        lmdb_save_path = '/home/xtwang/datasets/REDS/train_sharp_wval.lmdb'
         H_dst, W_dst = 720, 1280
     elif mode == 'train_sharp_bicubic':
         img_folder = '/home/xtwang/datasets/REDS/train_sharp_bicubic'
-        lmdb_save_path = '/home/xtwang/datasets/REDS/train_sharp_bicubic_wval.lmdb'  # must end with .lmdb
+        lmdb_save_path = '/home/xtwang/datasets/REDS/train_sharp_bicubic_wval.lmdb'
         H_dst, W_dst = 180, 320
     elif mode == 'train_blur_bicubic':
         img_folder = '/home/xtwang/datasets/REDS/train_blur_bicubic'
-        lmdb_save_path = '/home/xtwang/datasets/REDS/train_blur_bicubic_wval.lmdb'  # must end with .lmdb
+        lmdb_save_path = '/home/xtwang/datasets/REDS/train_blur_bicubic_wval.lmdb'
         H_dst, W_dst = 180, 320
     elif mode == 'train_blur':
         img_folder = '/home/xtwang/datasets/REDS/train_blur'
-        lmdb_save_path = '/home/xtwang/datasets/REDS/train_blur_wval.lmdb'  # must end with .lmdb
+        lmdb_save_path = '/home/xtwang/datasets/REDS/train_blur_wval.lmdb'
         H_dst, W_dst = 720, 1280
     elif mode == 'train_blur_comp':
         img_folder = '/home/xtwang/datasets/REDS/train_blur_comp'
-        lmdb_save_path = '/home/xtwang/datasets/REDS/train_blur_comp_wval.lmdb'  # must end with .lmdb
+        lmdb_save_path = '/home/xtwang/datasets/REDS/train_blur_comp_wval.lmdb'
         H_dst, W_dst = 720, 1280
     n_thread = 40
     ########################################################
+    if not lmdb_save_path.endswith('.lmdb'):
+        raise ValueError("lmdb_save_path must end with \'lmdb\'.")
     #### whether the lmdb file exist
     if osp.exists(lmdb_save_path):
         print('Folder [{:s}] already exists. Exit...'.format(lmdb_save_path))

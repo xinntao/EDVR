@@ -3,7 +3,6 @@ Vimeo90K dataset
 support reading images from lmdb, image folder and memcached
 '''
 import os.path as osp
-import sys
 import random
 import pickle
 import logging
@@ -13,14 +12,17 @@ import lmdb
 import torch
 import torch.utils.data as data
 import data.util as util
-
+try:
+    import mc  # import memcached
+except ImportError:
+    pass
 logger = logging.getLogger('base')
 
 
 class Vimeo90KDataset(data.Dataset):
     '''
     Reading the training Vimeo90K dataset
-    key example: 00001_0001
+    key example: 00001_0001 (_1, ..., _7)
     GT (Ground-Truth): 4th frame;
     LQ (Low-Quality): support reading N LQ frames, N = 1, 3, 5, 7 centered with 4th frame
     '''
@@ -63,10 +65,6 @@ class Vimeo90KDataset(data.Dataset):
         if self.data_type == 'lmdb':
             self.GT_env, self.LQ_env = None, None
         elif self.data_type == 'mc':  # memcached
-            try:
-                import mc  # import memcached
-            except:
-                pass
             self.mclient = None
         elif self.data_type == 'img':
             pass
@@ -75,10 +73,10 @@ class Vimeo90KDataset(data.Dataset):
 
     def _init_lmdb(self):
         # https://github.com/chainer/chainermn/issues/129
-        self.GT_env = lmdb.open(
-            self.opt['dataroot_GT'], readonly=True, lock=False, readahead=False, meminit=False)
-        self.LQ_env = lmdb.open(
-            self.opt['dataroot_LQ'], readonly=True, lock=False, readahead=False, meminit=False)
+        self.GT_env = lmdb.open(self.opt['dataroot_GT'], readonly=True, lock=False, readahead=False,
+                                meminit=False)
+        self.LQ_env = lmdb.open(self.opt['dataroot_LQ'], readonly=True, lock=False, readahead=False,
+                                meminit=False)
 
     def _ensure_memcached(self):
         if self.mclient is None:

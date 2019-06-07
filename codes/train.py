@@ -1,13 +1,8 @@
 import os
-import os.path as osp
-import sys
 import math
 import argparse
-import time
 import random
 import logging
-from collections import OrderedDict
-import numpy as np
 
 import torch
 import torch.distributed as dist
@@ -18,8 +13,6 @@ import options.options as option
 from utils import util
 from data import create_dataloader, create_dataset
 from models import create_model
-
-import yaml
 
 
 def init_dist(backend='nccl', **kwargs):
@@ -37,8 +30,8 @@ def main():
     #### options
     parser = argparse.ArgumentParser()
     parser.add_argument('-opt', type=str, help='Path to option JSON file.')
-    parser.add_argument(
-        '--launcher', choices=['none', 'pytorch'], default='none', help='job launcher')
+    parser.add_argument('--launcher', choices=['none', 'pytorch'], default='none',
+                        help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
     args = parser.parse_args()
     opt = option.parse(args.opt, is_train=True)
@@ -58,8 +51,8 @@ def main():
     if opt['path'].get('resume_state', None):
         # distributed resuming: all load into default GPU
         device_id = torch.cuda.current_device()
-        resume_state = torch.load(
-            opt['path']['resume_state'], map_location=lambda storage, loc: storage.cuda(device_id))
+        resume_state = torch.load(opt['path']['resume_state'],
+                                  map_location=lambda storage, loc: storage.cuda(device_id))
         option.check_resume(opt, resume_state['iter'])  # check resume options
     else:
         resume_state = None
@@ -73,13 +66,8 @@ def main():
                          and 'pretrain_model' not in key and 'resume' not in key))
 
         # config loggers. Before it, the log will not work
-        util.setup_logger(
-            'base',
-            opt['path']['log'],
-            'train_' + opt['name'],
-            level=logging.INFO,
-            screen=True,
-            tofile=True)
+        util.setup_logger('base', opt['path']['log'], 'train_' + opt['name'], level=logging.INFO,
+                          screen=True, tofile=True)
         logger = logging.getLogger('base')
         logger.info(option.dict2str(opt))
         # tensorboard logger
@@ -130,11 +118,14 @@ def main():
                 logger.info('Total epochs needed: {:d} for iters {:,d}'.format(
                     total_epochs, total_iters))
         elif phase == 'val':
+            pass
+            '''
             val_set = create_dataset(dataset_opt)
             val_loader = create_dataloader(val_set, dataset_opt, opt, None)
             if rank <= 0:
                 logger.info('Number of val images in [{:s}]: {:d}'.format(
                     dataset_opt['name'], len(val_set)))
+            '''
         else:
             raise NotImplementedError('Phase [{:s}] is not recognized.'.format(phase))
     assert train_loader is not None
