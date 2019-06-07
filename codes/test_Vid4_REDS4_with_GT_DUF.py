@@ -24,21 +24,26 @@ def main():
     data_mode = 'Vid4'  # Vid4 | sharp_bicubic
 
     # Possible combinations: (2, 16), (3, 16), (4, 16), (4, 28), (4, 52)
-    scale = 2
+    scale = 4
     layer = 16
+    assert (scale, layer) in [(2, 16), (3, 16), (4, 16), (4, 28),
+                              (4, 52)], 'Unrecognized (scale, layer) combination'
+
+    # model
+    N_in = 7
+    model_path = '../experiments/pretrained_models/DUF_x{}_{}L_official.pth'.format(scale, layer)
+    adapt_official = True if 'official' in model_path else False
+    DUF_downsampling = True  # True | False
+    if layer == 16:
+        model = DUF_arch.DUF_16L(scale=scale, adapt_official=adapt_official)
+    elif layer == 28:
+        model = DUF_arch.DUF_28L(scale=scale, adapt_official=adapt_official)
+    elif layer == 52:
+        model = DUF_arch.DUF_52L(scale=scale, adapt_official=adapt_official)
 
     # Vid4: SR
     # REDS4: sharp_bicubic (SR-clean), blur_bicubic (SR-blur);
     #        blur (deblur-clean), blur_comp (deblur-compression).
-
-    #### model
-    model_path = '../experiments/pretrained_models/DUF_x{}_{}}L_official.pth'.format(scale, layer)
-    N_in = 7
-
-    # model
-    adapt_official = True if 'official' in model_path else False
-    DUF_downsampling = True  # True | False
-    model = DUF_arch.DUF_16L(scale=scale, adapt_official=adapt_official)
 
     #### dataset
     if data_mode == 'Vid4':
