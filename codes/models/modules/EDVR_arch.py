@@ -205,12 +205,13 @@ class TSA_Fusion(nn.Module):
 
 class EDVR(nn.Module):
     def __init__(self, nf=64, nframes=5, groups=8, front_RBs=5, back_RBs=10, center=None,
-                 predeblur=False, HR_in=False):
+                 predeblur=False, HR_in=False, w_TSA=True):
         super(EDVR, self).__init__()
         self.nf = nf
         self.center = nframes // 2 if center is None else center
         self.is_predeblur = True if predeblur else False
         self.HR_in = True if HR_in else False
+        self.w_TSA = w_TSA
         ResidualBlock_noBN_f = functools.partial(mutil.ResidualBlock_noBN, nf=nf)
 
         #### extract features (for each frame)
@@ -231,7 +232,10 @@ class EDVR(nn.Module):
         self.fea_L3_conv2 = nn.Conv2d(nf, nf, 3, 1, 1, bias=True)
 
         self.pcd_align = PCD_Align(nf=nf, groups=groups)
-        self.tsa_fusion = TSA_Fusion(nf=nf, nframes=nframes, center=self.center)
+        if self.w_TSA:
+            self.tsa_fusion = TSA_Fusion(nf=nf, nframes=nframes, center=self.center)
+        else:
+            self.tsa_fusion = nn.Conv2d(nframes * nf, nf, 1, 1, bias=True)
 
         #### reconstruction
         self.recon_trunk = mutil.make_layer(ResidualBlock_noBN_f, back_RBs)
@@ -291,6 +295,8 @@ class EDVR(nn.Module):
             aligned_fea.append(self.pcd_align(nbr_fea_l, ref_fea_l))
         aligned_fea = torch.stack(aligned_fea, dim=1)  # [B, N, C, H, W]
 
+        if not self.w_TSA:
+            aligned_fea = aligned_fea.view(B, -1, H, W)
         fea = self.tsa_fusion(aligned_fea)
 
         out = self.recon_trunk(fea)
