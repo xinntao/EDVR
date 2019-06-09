@@ -9,10 +9,12 @@ from multiprocessing import Pool
 import numpy as np
 import lmdb
 import cv2
-import data.util as data_util
-import utils.util as util
-
-sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
+try:
+    sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
+    import data.util as data_util
+    import utils.util as util
+except ImportError:
+    pass
 
 
 def reading_image_worker(path, key):
@@ -232,7 +234,6 @@ def test_lmdb(dataroot, dataset='REDS'):
     print('Name: ', meta_info['name'])
     print('Resolution: ', meta_info['resolution'])
     print('# keys: ', len(meta_info['keys']))
-    keys = meta_info['keys']
     # read one image
     if dataset == 'vimeo90k':
         key = '00001_0001_4'
