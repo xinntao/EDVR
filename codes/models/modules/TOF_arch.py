@@ -7,7 +7,7 @@ Code reference:
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from .module_util import flow_warp
 
 
 def normalize(x):
@@ -20,34 +20,6 @@ def denormalize(x):
     mean = torch.Tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).type_as(x)
     std = torch.Tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).type_as(x)
     return x * std + mean
-
-
-def backward_warp(x, flow, interp_mode='bilinear', padding_mode='zeros'):
-    """Warp an image or feature map with optical flow
-    Args:
-        x (Tensor): size (N, C, H, W)
-        flow (Tensor): size (N, 2, H, W), normal value
-        interp_mode (str): 'nearest' or 'bilinear'
-        padding_mode (str): 'zeros' or 'border' or 'reflection'
-
-    Returns:
-        Tensor: warped image or feature map
-    """
-    flow = flow.permute(0, 2, 3, 1)  # [N, 2, H, W] -> [N, H, W, 2]
-    assert x.size()[-2:] == flow.size()[1:3]
-    B, C, H, W = x.size()
-
-    # mesh grid
-    grid_y, grid_x = torch.meshgrid(torch.arange(0, H), torch.arange(0, W))
-    grid = torch.stack((grid_x, grid_y), 2).float().type_as(x)  # W(x), H(y), 2
-
-    vgrid = grid + flow
-
-    # scale grid to [-1,1]
-    vgrid[:, :, :, 0] = 2.0 * vgrid[:, :, :, 0] / max(W - 1, 1) - 1.0
-    vgrid[:, :, :, 1] = 2.0 * vgrid[:, :, :, 1] / max(H - 1, 1) - 1.0
-    output = F.grid_sample(x, vgrid, mode=interp_mode, padding_mode=padding_mode)
-    return output
 
 
 class SpyNet_Block(nn.Module):
@@ -117,7 +89,7 @@ class SpyNet(nn.Module):
                 flow_up = nn.functional.pad(input=flow_up, pad=[0, 1, 0, 0], mode='replicate')
 
             flow = flow_up + self.blocks[i](torch.cat(
-                [ref[i], backward_warp(supp[i], flow_up), flow_up], 1))
+                [ref[i], flow_warp(supp[i], flow_up.permute(0, 2, 3, 1)), flow_up], 1))
         return flow
 
 
@@ -159,8 +131,8 @@ class TOFlow(nn.Module):
                 x_warped.append(x_ref)
             else:
                 x_supp = x[:, i, :, :, :]
-                flow = self.SpyNet(x_ref, x_supp)
-                x_warped.append(backward_warp(x_supp, flow))
+                flow = self.SpyNet(x_ref, x_supp).permute(0, 2, 3, 1)
+                x_warped.append(flow_warp(x_supp, flow))
         x_warped = torch.stack(x_warped, dim=1)
 
         x = x_warped.view(B, -1, H, W)
