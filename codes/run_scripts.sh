@@ -2,5 +2,5 @@
 python train.py -opt options/train/train_SRResNet.yml
 
 # distributed training
-# 4 GPUs
-python -m torch.distributed.launch --nproc_per_node=4 --master_port=4321 train.py -opt options/train/train_SRResNet.yml --launcher pytorch
+# 8 GPUs
+python -m torch.distributed.launch --nproc_per_node=8 --master_port=4321 train.py -opt options/train/train_EDVR.yml --launcher pytorch
