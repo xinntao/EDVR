@@ -49,13 +49,27 @@ class VideoSRBaseModel(BaseModel):
 
             #### optimizers
             wd_G = train_opt['weight_decay_G'] if train_opt['weight_decay_G'] else 0
-            optim_params = []
+            normal_params = []
+            tsa_fusion_params = []
             for k, v in self.netG.named_parameters():  # can optimize for a part of the model
                 if v.requires_grad:
-                    optim_params.append(v)
+                    if 'tsa_fusion' in k:
+                        tsa_fusion_params.append(v)
+                    else:
+                        normal_params.append(v)
                 else:
                     if self.rank <= 0:
                         logger.warning('Params [{:s}] will not optimize.'.format(k))
+            optim_params = [
+                {  # add normal params first
+                    'params': normal_params,
+                    'lr': train_opt['lr_G']
+                },
+                {
+                    'params': tsa_fusion_params,
+                    'lr': train_opt['lr_G']
+                },
+            ]
             self.optimizer_G = torch.optim.Adam(optim_params, lr=train_opt['lr_G'],
                                                 weight_decay=wd_G,
                                                 betas=(train_opt['beta1'], train_opt['beta2']))
@@ -86,7 +100,14 @@ class VideoSRBaseModel(BaseModel):
         if need_GT:
             self.real_H = data['GT'].to(self.device)
 
+    def set_params_lr_zero(self):
+        # fix normal module
+        self.optimizers[0].param_groups[0]['lr'] = 0
+
     def optimize_parameters(self, step):
+        if self.opt['train']['ft_tsa_only'] and step < self.opt['train']['ft_tsa_only']:
+            self.set_params_lr_zero()
+
         self.optimizer_G.zero_grad()
         self.fake_H = self.netG(self.var_L)
 
@@ -129,7 +150,7 @@ class VideoSRBaseModel(BaseModel):
         load_path_G = self.opt['path']['pretrain_model_G']
         if load_path_G is not None:
             logger.info('Loading model for G [{:s}] ...'.format(load_path_G))
-            self.load_network(load_path_G, self.netG)
+            self.load_network(load_path_G, self.netG, self.opt['path']['strict_load'])
 
     def save(self, iter_label):
         self.save_network(self.netG, 'G', iter_label)
