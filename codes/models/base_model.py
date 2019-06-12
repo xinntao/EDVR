@@ -82,9 +82,13 @@ class BaseModel():
         if isinstance(network, nn.DataParallel) or isinstance(network, DistributedDataParallel):
             network = network.module
         state_dict = network.state_dict()
+        new_state_dict = OrderedDict()
         for key, param in state_dict.items():
-            state_dict[key] = param.cpu()
-        torch.save(state_dict, save_path)
+            if key.startswith('module.'):
+                new_state_dict[key[7:]] = param.cpu()
+            else:
+                new_state_dict[key] = param.cpu()
+        torch.save(new_state_dict, save_path)
 
     def load_network(self, load_path, network, strict=True):
         if isinstance(network, nn.DataParallel) or isinstance(network, DistributedDataParallel):
