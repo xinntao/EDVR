@@ -5,26 +5,43 @@ By [Xintao Wang](https://xinntao.github.io/), Kelvin C.K. Chan, [Ke Yu](https://
 
 EDVR won all four tracks in [NTIRE 2019 Challenges on **Video Restoration and Enhancement**](http://www.vision.ee.ethz.ch/ntire19/) (CVPR19 Workshops). 
 
+### Highlights
+- **A unified framework** suitable for various video restoration tasks, *e.g.*, super-resolution, deblurring, denoising, *etc*
+- **State of the art**: Winners in NTIRE 2019 Challenges on Video Restoration and Enhancement
+- **Multi-GPU (distributed) training**
 
-Testing codes have been released. 
+### Updates
+[2019-06-11] Add data preparation in [wiki](https://github.com/xinntao/EDVR/wiki/Prepare-datasets-in-LMDB-format).<br/>
+[2019-06-07] Support [DUF testing](http://openaccess.thecvf.com/content_cvpr_2018/papers/Jo_Deep_Video_Super-Resolution_CVPR_2018_paper.pdf) (converted from [officially released models](https://github.com/yhjo09/VSR-DUF)). <br/>
+[2019-05-28] Release testing codes.
 
-### Dependencies
+## Dependencies and Installation
+Please refer to [wiki](https://github.com/xinntao/EDVR/wiki/Dependencies-and-installation) for dependencies and installation.
 
-- Python 3 (Recommend to use [Anaconda](https://www.anaconda.com/download/#linux))
-- [PyTorch = 1.0](https://pytorch.org/)
-- NVIDIA GPU + [CUDA](https://developer.nvidia.com/cuda-downloads)
-- [Deformable Convolution](https://arxiv.org/abs/1703.06211). We use [Charles Shang](https://github.com/CharlesShang)'s [DCNv2](https://github.com/CharlesShang/DCNv2) implementation. Please first compile it. 
-  ```
-  cd ./codes/models/modules/DCNv2
-  bash make.sh
-  ```
-- Python packages: `pip install numpy opencv-python lmdb`
+## Dataset Preparation
+We use datasets in LDMB format for faster IO speed. Please refer to [wiki](https://github.com/xinntao/EDVR/wiki/Prepare-datasets-in-LMDB-format) for more details.
 
-### How to test
+## Get Started
+Please see [wiki]() (TODO) for the basic usage, *i.e.,* training and testing.
+## Model Zoo and Baselines
+Results and pre-trained models are available in the [wiki-Model zoo]() (TODO).
 
-1. Download the [pretrained models](https://drive.google.com/open?id=1pFMrZQaqSeBJqGHSjzAlHvJ4jzHnKleE) and [testing datasts](https://drive.google.com/open?id=10-gUO6zBeOpWEamrWKCtSkkUFukB9W5m).
+## Contributing
+We appreciate all contributions. Please refer to [wiki]() (TODO) for the contributing guideline.
 
-2. Run `test_Vid4_REDS4_with_GT.py`
-
-
-Test lines.
+## Citation
+```
+@InProceedings{wang2019edvr,
+  author    = {Wang, Xintao and Chan, Kelvin C.K. and Yu, Ke and Dong, Chao and Loy, Chen Change},
+  title     = {EDVR: Video restoration with enhanced deformable convolutional networks},
+  booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition Workshops (CVPRW)},
+  month     = {June},
+  year      = {2019},
+}
+@Article{tian2018tdan,
+  author    = {Tian, Yapeng and Zhang, Yulun and Fu, Yun and Xu, Chenliang},
+  title     = {TDAN: Temporally deformable alignment network for video super-resolution},
+  journal   = {arXiv preprint arXiv:1812.02898},
+  year      = {2018},
+}
+```
