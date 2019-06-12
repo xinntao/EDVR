@@ -11,6 +11,7 @@ EDVR won all four tracks in [NTIRE 2019 Challenges on **Video Restoration and En
 - **Multi-GPU (distributed) training**
 
 ### Updates
+[2019-06-12] Add training codes, now only supporting `train_EDVR_woTSA_M.yml`.<br/>
 [2019-06-11] Add data preparation in [wiki](https://github.com/xinntao/EDVR/wiki/Prepare-datasets-in-LMDB-format).<br/>
 [2019-06-07] Support [DUF testing](http://openaccess.thecvf.com/content_cvpr_2018/papers/Jo_Deep_Video_Super-Resolution_CVPR_2018_paper.pdf) (converted from [officially released models](https://github.com/yhjo09/VSR-DUF)). <br/>
 [2019-05-28] Release testing codes.
@@ -34,9 +35,9 @@ EDVR won all four tracks in [NTIRE 2019 Challenges on **Video Restoration and En
 We use datasets in LDMB format for faster IO speed. Please refer to [wiki](https://github.com/xinntao/EDVR/wiki/Prepare-datasets-in-LMDB-format) for more details.
 
 ## Get Started
-Please see [wiki]() (TODO) for the basic usage, *i.e.,* training and testing.
+Please see [wiki](https://github.com/xinntao/EDVR/wiki/Testing-and-Training) for the basic usage, *i.e.,* training and testing.
 ## Model Zoo and Baselines
-Results and pre-trained models are available in the [wiki-Model zoo]() (TODO).
+Results and pre-trained models are available in the [wiki-Model zoo](https://github.com/xinntao/EDVR/wiki/Model-Zoo).
 
 ## Contributing
 We appreciate all contributions. Please refer to [mmdetection](https://github.com/open-mmlab/mmdetection/blob/master/CONTRIBUTING.md) for contributing guideline.
