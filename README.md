@@ -13,8 +13,7 @@ EDVR won all four tracks in [NTIRE 2019 Challenges on **Video Restoration and En
 ---
 - We are going to have a presentation in NTIRE 2019 Workshop (Monday, June 17, 2019 - room 104A Long Beach Convention Center, posters: Pacific Arena Ballroom). Welcome to our poster!
 
-- Check out our CVPR19 work: **DNI**: [`Deep Network Interpolation for Continuous Imagery Effect Transition`](https://xinntao.github.io/projects/DNI)
-
+- Check out our CVPR19 work: **DNI** - [`Deep Network Interpolation for Continuous Imagery Effect Transition`](https://xinntao.github.io/projects/DNI)
 
 ---
 
@@ -35,7 +34,7 @@ EDVR won all four tracks in [NTIRE 2019 Challenges on **Video Restoration and En
   cd ./codes/models/modules/DCNv2
   bash make.sh
   ```
-- Python packages: `pip install numpy opencv-python lmdb`
+- Python packages: `pip install numpy opencv-python lmdb pyyaml`
 - TensorBoard: 
   - PyTorch >= 1.1: `pip install tb-nightly future`
   - PyTorch == 1.0: `pip install tensorboardX`
