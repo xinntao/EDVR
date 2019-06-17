@@ -29,7 +29,7 @@ def init_dist(backend='nccl', **kwargs):
 def main():
     #### options
     parser = argparse.ArgumentParser()
-    parser.add_argument('-opt', type=str, help='Path to option JSON file.')
+    parser.add_argument('-opt', type=str, help='Path to option YAML file.')
     parser.add_argument('--launcher', choices=['none', 'pytorch'], default='none',
                         help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
@@ -164,8 +164,10 @@ def main():
             #### log
             if current_step % opt['logger']['print_freq'] == 0:
                 logs = model.get_current_log()
-                message = '<epoch:{:3d}, iter:{:8,d}, lr:{:.3e}> '.format(
-                    epoch, current_step, model.get_current_learning_rate())
+                message = '<epoch:{:3d}, iter:{:8,d}, lr:('.format(epoch, current_step)
+                for v in model.get_current_learning_rate():
+                    message += '{:.3e},'.format(v)
+                message += ')>'
                 for k, v in logs.items():
                     message += '{:s}: {:.4e} '.format(k, v)
                     # tensorboard logger
