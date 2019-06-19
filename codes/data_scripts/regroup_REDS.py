@@ -1,8 +1,8 @@
 import os
 import glob
 
-train_path = '/home/xtwang/datasets/REDS/train_sharp_bicubic/X4'
-val_path = '/home/xtwang/datasets/REDS/val_sharp_bicubic/X4'
+train_path = '/mnt/dataset/REDS/train_sharp'#_bicubic/X4'
+val_path = '/mnt/dataset/REDS/val_sharp'#_bicubic/X4'
 
 # mv the val set
 val_folders = glob.glob(os.path.join(val_path, '*'))

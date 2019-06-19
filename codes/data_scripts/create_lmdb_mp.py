@@ -14,7 +14,7 @@ try:
     import data.util as data_util
     import utils.util as util
 except ImportError:
-    pass
+    print('import util failed.')
 
 
 def reading_image_worker(path, key):
@@ -136,12 +136,12 @@ def REDS():
     mode = 'train_sharp'
     # train_sharp | train_sharp_bicubic | train_blur_bicubic| train_blur | train_blur_comp
     if mode == 'train_sharp':
-        img_folder = '/home/xtwang/datasets/REDS/train_sharp'
-        lmdb_save_path = '/home/xtwang/datasets/REDS/train_sharp_wval.lmdb'
+        img_folder = '/mnt/dataset/REDS/train_sharp'
+        lmdb_save_path = '/mnt/dataset/REDS/train_sharp_wval.lmdb'
         H_dst, W_dst = 720, 1280
     elif mode == 'train_sharp_bicubic':
-        img_folder = '/home/xtwang/datasets/REDS/train_sharp_bicubic'
-        lmdb_save_path = '/home/xtwang/datasets/REDS/train_sharp_bicubic_wval.lmdb'
+        img_folder = '/mnt/dataset/REDS/train_sharp_bicubic'
+        lmdb_save_path = '/mnt/dataset/REDS/train_sharp_bicubic_wval.lmdb'
         H_dst, W_dst = 180, 320
     elif mode == 'train_blur_bicubic':
         img_folder = '/home/xtwang/datasets/REDS/train_blur_bicubic'
@@ -227,6 +227,94 @@ def REDS():
     pickle.dump(meta_info, open(osp.join(lmdb_save_path, 'meta_info.pkl'), "wb"))
     print('Finish creating lmdb meta info.')
 
+def Youku():
+    '''create lmdb for the REDS dataset, each image with fixed size
+    GT: [3, 720, 1280], key: 000_00000000
+    LR: [3, 180, 320], key: 000_00000000
+    key: 000_00000000
+    '''
+    #### configurations
+    mode = 'train_sharp'
+    # train_sharp | train_sharp_bicubic | train_blur_bicubic| train_blur | train_blur_comp
+    if mode == 'train_sharp':
+        img_folder = '/mnt/dataset/REDS/train_sharp'
+        lmdb_save_path = '/mnt/dataset/REDS/train_sharp_wval.lmdb'
+        H_dst, W_dst = 720, 1280
+    elif mode == 'train_sharp_bicubic':
+        img_folder = '/mnt/dataset/REDS/train_sharp_bicubic'
+        lmdb_save_path = '/mnt/dataset/REDS/train_sharp_bicubic_wval.lmdb'
+        H_dst, W_dst = 180, 320
+    n_thread = 40
+    ########################################################
+    if not lmdb_save_path.endswith('.lmdb'):
+        raise ValueError("lmdb_save_path must end with \'lmdb\'.")
+    #### whether the lmdb file exist
+    if osp.exists(lmdb_save_path):
+        print('Folder [{:s}] already exists. Exit...'.format(lmdb_save_path))
+        sys.exit(1)
+
+    #### read all the image paths to a list
+    print('Reading image path list ...')
+    all_img_list = data_util._get_paths_from_images(img_folder)
+    keys = []
+    for img_path in all_img_list:
+        split_rlt = img_path.split('/')
+        a = split_rlt[-2]
+        b = split_rlt[-1].split('.png')[0]
+        keys.append(a + '_' + b)
+
+    #### read all images to memory (multiprocessing)
+    dataset = {}  # store all image data. list cannot keep the order, use dict
+    print('Read images with multiprocessing, #thread: {} ...'.format(n_thread))
+    pbar = util.ProgressBar(len(all_img_list))
+
+    def mycallback(arg):
+        '''get the image data and update pbar'''
+        key = arg[0]
+        dataset[key] = arg[1]
+        pbar.update('Reading {}'.format(key))
+
+    pool = Pool(n_thread)
+    for path, key in zip(all_img_list, keys):
+        pool.apply_async(reading_image_worker, args=(path, key), callback=mycallback)
+    pool.close()
+    pool.join()
+    print('Finish reading {} images.\nWrite lmdb...'.format(len(all_img_list)))
+
+    #### create lmdb environment
+    data_size_per_img = dataset['000_00000000'].nbytes
+    if 'flow' in mode:
+        data_size_per_img = dataset['000_00000002_n1'].nbytes
+    print('data size per image is: ', data_size_per_img)
+    data_size = data_size_per_img * len(all_img_list)
+    env = lmdb.open(lmdb_save_path, map_size=data_size * 10)
+
+    #### write data to lmdb
+    pbar = util.ProgressBar(len(all_img_list))
+    with env.begin(write=True) as txn:
+        for key in keys:
+            pbar.update('Write {}'.format(key))
+            key_byte = key.encode('ascii')
+            data = dataset[key]
+            if 'flow' in mode:
+                H, W = data.shape
+                assert H == H_dst and W == W_dst, 'different shape.'
+            else:
+                H, W, C = data.shape  # fixed shape
+                assert H == H_dst and W == W_dst and C == 3, 'different shape.'
+            txn.put(key_byte, data)
+    print('Finish writing lmdb.')
+
+    #### create meta information
+    meta_info = {}
+    meta_info['name'] = 'Youku_{}_wval'.format(mode)
+    if 'flow' in mode:
+        meta_info['resolution'] = '{}_{}_{}'.format(1, H_dst, W_dst)
+    else:
+        meta_info['resolution'] = '{}_{}_{}'.format(3, H_dst, W_dst)
+    meta_info['keys'] = keys
+    pickle.dump(meta_info, open(osp.join(lmdb_save_path, 'meta_info.pkl'), "wb"))
+    print('Finish creating lmdb meta info.')
 
 def test_lmdb(dataroot, dataset='REDS'):
     env = lmdb.open(dataroot, readonly=True, lock=False, readahead=False, meminit=False)
@@ -251,4 +339,5 @@ def test_lmdb(dataroot, dataset='REDS'):
 if __name__ == "__main__":
     # vimeo90k()
     REDS()
+    # Youku()
     # test_lmdb('/home/xtwang/datasets/REDS/train_sharp_wval.lmdb', 'REDS')

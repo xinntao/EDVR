@@ -14,8 +14,8 @@ datasets:
     interval_list: [1]
     random_reverse: false
     border_mode: false
-    dataroot_GT: /home/xtwang/datasets/REDS/train_sharp_wval.lmdb
-    dataroot_LQ: /home/xtwang/datasets/REDS/train_sharp_bicubic_wval.lmdb
+    dataroot_GT: /mnt/dataset/REDS/train_sharp_wval.lmdb
+    dataroot_LQ: /mnt/dataset/REDS/train_sharp_bicubic_wval.lmdb
     cache_keys: REDS_trainval_keys.pkl
 
     N_frames: 5
