@@ -1,0 +1,9 @@
+Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple
+Collecting PyHamcrest
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/9a/d5/d37fd731b7d0e91afcc84577edeccf4638b4f9b82f5ffe2f8b62e2ddc609/PyHamcrest-1.9.0-py2.py3-none-any.whl (52kB)
+Collecting typed-ast
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/fb/56/dd4e168a0009da85c78c6cfe91f5b2df2c7bbed60f3ba778c4a71289e6fb/typed_ast-1.4.0-cp37-cp37m-manylinux1_x86_64.whl (736kB)
+Requirement already satisfied: setuptools in /home/dengzeshuai/anaconda3/lib/python3.7/site-packages (from PyHamcrest) (40.2.0)
+Requirement already satisfied: six in /home/dengzeshuai/anaconda3/lib/python3.7/site-packages (from PyHamcrest) (1.11.0)
+Installing collected packages: PyHamcrest, typed-ast
+Successfully installed PyHamcrest-1.9.0 typed-ast-1.4.0

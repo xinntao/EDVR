@@ -4,7 +4,7 @@ use_tb_logger: true
 model: VideoSR_base
 distortion: sr
 scale: 4
-gpu_ids: [0,1]
+gpu_ids: [0,1,2,7]
 
 #### datasets
 datasets:
