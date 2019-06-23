@@ -2,5 +2,10 @@
 # python train.py -opt options/train/train_SRResNet.yml
 
 # distributed training
-# 3 GPUs
-python -m torch.distributed.launch --nproc_per_node=4 --master_port=4321 train.py -opt options/train/train_EDVR_woTSA_M.yml --launcher pytorch
+# 4 GPUs
+# python -m torch.distributed.launch --nproc_per_node=4 --master_port=4321 train.py -opt options/train/train_EDVR_woTSA_M.yml --launcher pytorch
+# python -m torch.distributed.launch --nproc_per_node=4 --master_port=4321 train.py -opt options/train/train_EDVR_M.yml --launcher pytorch
+
+# train with Youku dataset 
+python -m torch.distributed.launch --nproc_per_node=4 --master_port=1234 train.py -opt options/train/train_EDVR_woTSA_Youku.yml --launcher pytorch
+# python -m torch.distributed.launch --nproc_per_node=4 --master_port=1234 train.py -opt options/train/train_EDVR_Youku.yml --launcher pytorch

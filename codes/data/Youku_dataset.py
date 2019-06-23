@@ -12,25 +12,21 @@ import lmdb
 import torch
 import torch.utils.data as data
 import data.util as util
-try:
-    import mc  # import memcached
-except ImportError:
-    pass
 
 logger = logging.getLogger('base')
 
 
-class REDSDataset(data.Dataset):
+class YoukuDataset(data.Dataset):
     '''
     Reading the training REDS dataset
     key example: 000_00000000
     GT: Ground-Truth;
-    LQ: Low-Quality, e.g., low-resolution/blurry/noisy/compressed frames
-    support reading N LQ frames, N = 1, 3, 5, 7
+    LQ: Low-Resolution, e.g., LR video frames
+    support reading N LR frames, N = 1, 3, 5, 7
     '''
 
     def __init__(self, opt):
-        super(REDSDataset, self).__init__()
+        super(YoukuDataset, self).__init__()
         self.opt = opt
         # temporal augmentation
         self.interval_list = opt['interval_list']
@@ -47,19 +43,18 @@ class REDSDataset(data.Dataset):
             logger.info('Using cache keys: {}'.format(opt['cache_keys']))
             cache_keys = opt['cache_keys']
         else:
-            cache_keys = 'REDS_trainval_keys.pkl'
+            cache_keys = 'Youku_train_keys.pkl'
         logger.info('Using cache keys - {}.'.format(cache_keys))
         self.paths_GT = pickle.load(open('./data/{}'.format(cache_keys), 'rb'))
-        # remove the REDS4 for testing
-        self.paths_GT = [
-            v for v in self.paths_GT if v.split('_')[0] not in ['000', '011', '015', '020']
-        ]
         assert self.paths_GT, 'Error: GT path is empty.'
+        # load data resolution
+        meta = pickle.load(open(osp.join(self.GT_root, 'meta_info.pkl'), 'rb'))
+        self.resolutions_GT = meta['resolution']
+        meta = pickle.load(open(osp.join(self.LQ_root, 'meta_info.pkl'), 'rb'))
+        self.resolutions_LQ = meta['resolution']
 
         if self.data_type == 'lmdb':
             self.GT_env, self.LQ_env = None, None
-        elif self.data_type == 'mc':  # memcached
-            self.mclient = None
         elif self.data_type == 'img':
             pass
         else:
@@ -72,37 +67,10 @@ class REDSDataset(data.Dataset):
         self.LQ_env = lmdb.open(self.opt['dataroot_LQ'], readonly=True, lock=False, readahead=False,
                                 meminit=False)
 
-    def _ensure_memcached(self):
-        if self.mclient is None:
-            # specify the config files
-            server_list_config_file = None
-            client_config_file = None
-            self.mclient = mc.MemcachedClient.GetInstance(server_list_config_file,
-                                                          client_config_file)
-
-    def _read_img_mc(self, path):
-        ''' Return BGR, HWC, [0, 255], uint8'''
-        value = mc.pyvector()
-        self.mclient.Get(path, value)
-        value_buf = mc.ConvertBuffer(value)
-        img_array = np.frombuffer(value_buf, np.uint8)
-        img = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
-        return img
-
-    def _read_img_mc_BGR(self, path, name_a, name_b):
-        ''' Read BGR channels separately and then combine for 1M limits in cluster'''
-        img_B = self._read_img_mc(osp.join(path + '_B', name_a, name_b + '.png'))
-        img_G = self._read_img_mc(osp.join(path + '_G', name_a, name_b + '.png'))
-        img_R = self._read_img_mc(osp.join(path + '_R', name_a, name_b + '.png'))
-        img = cv2.merge((img_B, img_G, img_R))
-        return img
-
     def __getitem__(self, index):
-        if self.data_type == 'mc':
-            self._ensure_memcached()
-        elif self.data_type == 'lmdb':
-            if (self.GT_env is None) or (self.LQ_env is None):
-                self._init_lmdb()
+        # if self.data_type == 'lmdb':
+        if (self.GT_env is None) or (self.LQ_env is None):
+            self._init_lmdb()
 
         scale = self.opt['scale']
         GT_size = self.opt['GT_size']
@@ -117,9 +85,9 @@ class REDSDataset(data.Dataset):
             N_frames = self.opt['N_frames']
             if self.random_reverse and random.random() < 0.5:
                 direction = random.choice([0, 1])
-            if center_frame_idx + interval * (N_frames - 1) > 99:
+            if center_frame_idx + interval * (N_frames - 1) > 100:
                 direction = 0
-            elif center_frame_idx - interval * (N_frames - 1) < 0:
+            elif center_frame_idx - interval * (N_frames - 1) < 1:
                 direction = 1
             # get the neighbor list
             if direction == 1:
@@ -128,46 +96,41 @@ class REDSDataset(data.Dataset):
             else:
                 neighbor_list = list(
                     range(center_frame_idx, center_frame_idx - interval * N_frames, -interval))
-            name_b = '{:08d}'.format(neighbor_list[0])
+            name_b = '{:03d}'.format(neighbor_list[0])
         else:
             # ensure not exceeding the borders
             while (center_frame_idx + self.half_N_frames * interval >
-                   99) or (center_frame_idx - self.half_N_frames * interval < 0):
-                center_frame_idx = random.randint(0, 99)
+                   100) or (center_frame_idx - self.half_N_frames * interval < 1):
+                center_frame_idx = random.randint(1, 100)
             # get the neighbor list
             neighbor_list = list(
                 range(center_frame_idx - self.half_N_frames * interval,
                       center_frame_idx + self.half_N_frames * interval + 1, interval))
             if self.random_reverse and random.random() < 0.5:
                 neighbor_list.reverse()
-            name_b = '{:08d}'.format(neighbor_list[self.half_N_frames])
+            name_b = '{:03d}'.format(neighbor_list[self.half_N_frames])
 
         assert len(
             neighbor_list) == self.opt['N_frames'], 'Wrong length of neighbor list: {}'.format(
                 len(neighbor_list))
 
         #### get the GT image (as the center frame)
-        if self.data_type == 'mc':
-            img_GT = self._read_img_mc_BGR(self.GT_root, name_a, name_b)
-            img_GT = img_GT.astype(np.float32) / 255.
-        elif self.data_type == 'lmdb':
-            img_GT = util.read_img(self.GT_env, key, (3, 720, 1280))
+        resolutions_GT = [int(s) for s in self.resolutions_GT[name_a].split('_')]
+        if self.data_type == 'lmdb':
+            img_GT = util.read_img(self.GT_env, key, resolutions_GT)
         else:
-            img_GT = util.read_img(None, osp.join(self.GT_root, name_a, name_b + '.png'))
+            # img_GT filename is Youku_00059_h_GT100.bmp
+            img_GT = util.read_img(None, osp.join(self.GT_root, 'Youku_{}_h_GT{}.bmp'.format(name_a, name_b))) 
 
         #### get LQ images
-        LQ_size_tuple = (3, 180, 320) if self.LR_input else (3, 720, 1280)
+        resolutions_LQ = [int(s) for s in self.resolutions_LQ[name_a].split('_')]
+        LQ_size_tuple = resolutions_LQ if self.LR_input else resolutions_GT
         img_LQ_l = []
         for v in neighbor_list:
-            img_LQ_path = osp.join(self.LQ_root, name_a, '{:08d}.png'.format(v))
-            if self.data_type == 'mc':
-                if self.LR_input:
-                    img_LQ = self._read_img_mc(img_LQ_path)
-                else:
-                    img_LQ = self._read_img_mc_BGR(self.LQ_root, name_a, '{:08d}'.format(v))
-                img_LQ = img_LQ.astype(np.float32) / 255.
-            elif self.data_type == 'lmdb':
-                img_LQ = util.read_img(self.LQ_env, '{}_{:08d}'.format(name_a, v), LQ_size_tuple)
+            # img_LQ filename is Youku_00059_l100.bmp
+            img_LQ_path = osp.join(self.LQ_root, 'Youku_{}_l{:03d}.bmp'.format(name_a, v))
+            if self.data_type == 'lmdb':
+                img_LQ = util.read_img(self.LQ_env, '{}_{:03d}'.format(name_a, v), LQ_size_tuple) 
             else:
                 img_LQ = util.read_img(None, img_LQ_path)
             img_LQ_l.append(img_LQ)

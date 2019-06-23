@@ -87,7 +87,7 @@ def vimeo90k():
 
     pool = Pool(n_thread)
     for path, key in zip(all_img_list, keys):
-        pool.apply_async(reading_image_worker, args=(path, key), callback=mycallback)
+        pool.apply_async(reading_image_worker, args=(path, key), callback=mycallback) # reading_image_worker return (key, img)
     pool.close()
     pool.join()
     print('Finish reading {} images.\nWrite lmdb...'.format(len(all_img_list)))
@@ -229,21 +229,21 @@ def REDS():
 
 def Youku():
     '''create lmdb for the REDS dataset, each image with fixed size
-    GT: [3, 720, 1280], key: 000_00000000
-    LR: [3, 180, 320], key: 000_00000000
-    key: 000_00000000
+    GT: [3, 720, 1280], key: Youku_00059_l100
+    LR: [3, 180, 320], key: Youku_00059_h_GT100
+    key: 00059_100
     '''
     #### configurations
-    mode = 'train_sharp'
-    # train_sharp | train_sharp_bicubic | train_blur_bicubic| train_blur | train_blur_comp
-    if mode == 'train_sharp':
-        img_folder = '/mnt/dataset/REDS/train_sharp'
-        lmdb_save_path = '/mnt/dataset/REDS/train_sharp_wval.lmdb'
-        H_dst, W_dst = 720, 1280
-    elif mode == 'train_sharp_bicubic':
-        img_folder = '/mnt/dataset/REDS/train_sharp_bicubic'
-        lmdb_save_path = '/mnt/dataset/REDS/train_sharp_bicubic_wval.lmdb'
-        H_dst, W_dst = 180, 320
+    mode = 'HR'
+    # HR | LR 
+    if mode == 'HR':
+        img_folder = '/mnt/dataset/youku_data/round1/train/HR_frames'
+        lmdb_save_path = '/mnt/dataset/youku_data/round1/train/HR_frames.lmdb'
+        # H_dst, W_dst = 1080, 1920 # 1920 x 1080
+    elif mode == 'LR':
+        img_folder = '/mnt/dataset/youku_data/round1/train/LR_frames'
+        lmdb_save_path = '/mnt/dataset/youku_data/round1/train/LR_frames.lmdb'
+        # H_dst, W_dst = 270, 480 # 480 x 270
     n_thread = 40
     ########################################################
     if not lmdb_save_path.endswith('.lmdb'):
@@ -258,9 +258,10 @@ def Youku():
     all_img_list = data_util._get_paths_from_images(img_folder)
     keys = []
     for img_path in all_img_list:
-        split_rlt = img_path.split('/')
-        a = split_rlt[-2]
-        b = split_rlt[-1].split('.png')[0]
+        filename = osp.splitext(osp.basename(img_path))[0]
+        a = filename[6:11]
+        b = filename[-3:]
+        # print(filename, a, b)
         keys.append(a + '_' + b)
 
     #### read all images to memory (multiprocessing)
@@ -282,36 +283,31 @@ def Youku():
     print('Finish reading {} images.\nWrite lmdb...'.format(len(all_img_list)))
 
     #### create lmdb environment
-    data_size_per_img = dataset['000_00000000'].nbytes
-    if 'flow' in mode:
-        data_size_per_img = dataset['000_00000002_n1'].nbytes
+    data_size_per_img = dataset['00000_001'].nbytes
     print('data size per image is: ', data_size_per_img)
-    data_size = data_size_per_img * len(all_img_list)
+    data_size = data_size_per_img * len(all_img_list) 
     env = lmdb.open(lmdb_save_path, map_size=data_size * 10)
 
     #### write data to lmdb
-    pbar = util.ProgressBar(len(all_img_list))
+    pbar = util.ProgressBar(len(all_img_list)) 
+    resolution = {} # save every resoution for each videos
     with env.begin(write=True) as txn:
         for key in keys:
             pbar.update('Write {}'.format(key))
             key_byte = key.encode('ascii')
             data = dataset[key]
-            if 'flow' in mode:
-                H, W = data.shape
-                assert H == H_dst and W == W_dst, 'different shape.'
-            else:
-                H, W, C = data.shape  # fixed shape
-                assert H == H_dst and W == W_dst and C == 3, 'different shape.'
+            if key.split('_')[-1] == '001':
+                H_dst, W_dst, C_dst = data.shape 
+                resolution[key.split('_')[0]] =  '{}_{}_{}'.format(C_dst, H_dst, W_dst)
+            H, W, C = data.shape  # fixed shape in each video
+            assert H == H_dst and W == W_dst and C == C_dst, 'different shape.'
             txn.put(key_byte, data)
     print('Finish writing lmdb.')
 
     #### create meta information
     meta_info = {}
-    meta_info['name'] = 'Youku_{}_wval'.format(mode)
-    if 'flow' in mode:
-        meta_info['resolution'] = '{}_{}_{}'.format(1, H_dst, W_dst)
-    else:
-        meta_info['resolution'] = '{}_{}_{}'.format(3, H_dst, W_dst)
+    meta_info['name'] = 'Youku_train_{}'.format(mode)
+    meta_info['resolution'] = resolution
     meta_info['keys'] = keys
     pickle.dump(meta_info, open(osp.join(lmdb_save_path, 'meta_info.pkl'), "wb"))
     print('Finish creating lmdb meta info.')
@@ -325,19 +321,25 @@ def test_lmdb(dataroot, dataset='REDS'):
     # read one image
     if dataset == 'vimeo90k':
         key = '00001_0001_4'
-    else:
+    elif dataset == 'REDS':
         key = '000_00000000'
+    elif dataset == 'Youku':
+        key = '00031_001'
+    assert key is not None, 'dataset name is wrong.'
     print('Reading {} for test.'.format(key))
     with env.begin(write=False) as txn:
         buf = txn.get(key.encode('ascii'))
     img_flat = np.frombuffer(buf, dtype=np.uint8)
-    C, H, W = [int(s) for s in meta_info['resolution'].split('_')]
+    if isinstance(meta_info['resolution'], dict):
+        C, H, W = [int(s) for s in meta_info['resolution'][key.split('_')[0]].split('_')]
+    else:
+        C, H, W = [int(s) for s in meta_info['resolution'].split('_')]
     img = img_flat.reshape(H, W, C)
     cv2.imwrite('test.png', img)
 
 
 if __name__ == "__main__":
     # vimeo90k()
-    REDS()
-    # Youku()
-    # test_lmdb('/home/xtwang/datasets/REDS/train_sharp_wval.lmdb', 'REDS')
+    # REDS()
+    Youku()
+    # test_lmdb('/mnt/dataset/youku_data/round1/train/HR_frames.lmdb', 'Youku')
