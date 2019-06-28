@@ -10,15 +10,9 @@ EDVR won all four tracks in [NTIRE 2019 Challenges on **Video Restoration and En
 - **State of the art**: Winners in NTIRE 2019 Challenges on Video Restoration and Enhancement
 - **Multi-GPU (distributed) training**
 
----
-- We are going to have a presentation in NTIRE 2019 Workshop (Monday, June 17, 2019 - room 104A Long Beach Convention Center, posters: Pacific Arena Ballroom). Welcome to our poster!
-
-- Check out our CVPR19 work: **DNI** - [`Deep Network Interpolation for Continuous Imagery Effect Transition`](https://xinntao.github.io/projects/DNI)
-
----
-
-
 ### Updates
+[2019-06-28] Provide training logs and pretrained model for EDVR-M. Check [here](https://github.com/xinntao/EDVR/wiki/Testing-and-Training). <br/>
+[2019-06-28] Support [TOFlow testing (SR)](http://toflow.csail.mit.edu/) (converted from [officially released models](https://github.com/anchen1011/toflow)). <br/>
 [2019-06-12] Add training codes.<br/>
 [2019-06-11] Add data preparation in [wiki](https://github.com/xinntao/EDVR/wiki/Prepare-datasets-in-LMDB-format).<br/>
 [2019-06-07] Support [DUF testing](http://openaccess.thecvf.com/content_cvpr_2018/papers/Jo_Deep_Video_Super-Resolution_CVPR_2018_paper.pdf) (converted from [officially released models](https://github.com/yhjo09/VSR-DUF)). <br/>
