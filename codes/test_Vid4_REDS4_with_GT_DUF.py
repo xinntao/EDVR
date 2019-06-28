@@ -51,7 +51,7 @@ def main():
     crop_border = 8
     border_frame = N_in // 2  # border frames when evaluate
     # temporal padding mode
-    padding = 'replicate'  # different from the official testing codes, which pads zeros.
+    padding = 'new_info'  # different from the official testing codes, which pads zeros.
     save_imgs = True
     ############################################################################
     device = torch.device('cuda')
