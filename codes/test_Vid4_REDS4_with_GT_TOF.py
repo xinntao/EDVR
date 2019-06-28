@@ -1,7 +1,7 @@
-'''
-test Vid4 (SR) and REDS4 (SR-clean, SR-blur, deblur-clean, deblur-compression) datasets
+"""
+TOF testing script, test Vid4 (SR) and REDS4 (SR-clean) datasets
 write to txt log file
-'''
+"""
 
 import os
 import os.path as osp
@@ -21,39 +21,25 @@ def main():
     # configurations
     #################
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    data_mode = 'Vid4'  # Vid4 | sharp_bicubic | blur_bicubic | blur | blur_comp
-    # Vid4: SR
-    # REDS4: sharp_bicubic (SR-clean), blur_bicubic (SR-blur);
-    #        blur (deblur-clean), blur_comp (deblur-compression).
+    data_mode = 'Vid4'  # Vid4 | sharp_bicubic (REDS)
 
-    #### model
-    if data_mode == 'Vid4':
-        model_path = '../experiments/pretrained_models/TOF_official_clean.pth'
-    elif data_mode == 'sharp_bicubic':
-        model_path = '../experiments/pretrained_models/TOF_official_clean.pth'
-    else:
-        raise NotImplementedError
-
-    N_in = 7  # use N_in images to restore one HR image
-
+    # model
+    N_in = 7
+    model_path = '../experiments/pretrained_models/TOF_official.pth'
     adapt_official = True if 'official' in model_path else False
     model = TOF_arch.TOFlow(adapt_official=adapt_official)
 
     #### dataset
     if data_mode == 'Vid4':
-        test_dataset_folder = '../datasets/Vid4/BI_MATLABx4/*'
+        test_dataset_folder = '../datasets/Vid4/BIx4up_direct/*'
     else:
         test_dataset_folder = '../datasets/REDS4/{}/*'.format(data_mode)
 
     #### evaluation
-    flip_test = False
     crop_border = 0
     border_frame = N_in // 2  # border frames when evaluate
     # temporal padding mode
-    if data_mode == 'Vid4' or data_mode == 'sharp_bicubic':
-        padding = 'new_info'
-    else:
-        padding = 'replicate'
+    padding = 'new_info'  # different from the official setting
     save_imgs = True
     ############################################################################
     device = torch.device('cuda')
@@ -67,7 +53,6 @@ def main():
     logger.info('Padding mode: {}'.format(padding))
     logger.info('Model path: {}'.format(model_path))
     logger.info('Save images: {}'.format(save_imgs))
-    logger.info('Flip Test: {}'.format(flip_test))
 
     def read_image(img_path):
         '''read one image from img_path
@@ -158,7 +143,7 @@ def main():
         #### read GT images
         img_GT_l = []
         if data_mode == 'Vid4':
-            sub_folder_GT = osp.join(sub_folder.replace('/BI_MATLABx4/', '/GT/'), '*')
+            sub_folder_GT = osp.join(sub_folder.replace('/BIx4up_direct/', '/GT/'), '*')
         else:
             sub_folder_GT = osp.join(sub_folder.replace('/{}/'.format(data_mode), '/GT/'), '*')
         for img_GT_path in sorted(glob.glob(sub_folder_GT)):
@@ -175,25 +160,6 @@ def main():
             imgs_in = imgs.index_select(0, torch.LongTensor(select_idx)).unsqueeze(0).to(device)
             output = single_forward(model, imgs_in)
             output_f = output.data.float().cpu().squeeze(0)
-
-            if flip_test:
-                # flip W
-                output = single_forward(model, torch.flip(imgs_in, (-1, )))
-                output = torch.flip(output, (-1, ))
-                output = output.data.float().cpu().squeeze(0)
-                output_f = output_f + output
-                # flip H
-                output = single_forward(model, torch.flip(imgs_in, (-2, )))
-                output = torch.flip(output, (-2, ))
-                output = output.data.float().cpu().squeeze(0)
-                output_f = output_f + output
-                # flip both H and W
-                output = single_forward(model, torch.flip(imgs_in, (-2, -1)))
-                output = torch.flip(output, (-2, -1))
-                output = output.data.float().cpu().squeeze(0)
-                output_f = output_f + output
-
-                output_f = output_f / 4
 
             output = util.tensor2img(output_f)
 
@@ -253,7 +219,6 @@ def main():
     logger.info('Padding mode: {}'.format(padding))
     logger.info('Model path: {}'.format(model_path))
     logger.info('Save images: {}'.format(save_imgs))
-    logger.info('Flip Test: {}'.format(flip_test))
     logger.info('Total Average PSNR: {:.6f} dB for {} clips. '
                 'Center PSNR: {:.6f} dB. Border PSNR: {:.6f} dB.'.format(
                     sum(avg_psnr_l) / len(avg_psnr_l), len(sub_folder_l),

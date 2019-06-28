@@ -1,9 +1,9 @@
 '''PyTorch implementation of TOFlow
-Paper: Xue et al., Video Enhancement with Task-Oriented Flow, 2017
+Paper: Xue et al., Video Enhancement with Task-Oriented Flow, IJCV 2018
 Code reference:
- 1. https://github.com/anchen1011/toflow
- 2. https://github.com/Coldog2333/pytoflow
- '''
+1. https://github.com/anchen1011/toflow
+2. https://github.com/Coldog2333/pytoflow
+'''
 
 import torch
 import torch.nn as nn
@@ -23,7 +23,7 @@ def denormalize(x):
 
 
 class SpyNet_Block(nn.Module):
-    '''A submodule of SpyNet. In this implementation, 4 such submodules are used'''
+    '''A submodule of SpyNet.'''
 
     def __init__(self):
         super(SpyNet_Block, self).__init__()
@@ -41,7 +41,7 @@ class SpyNet_Block(nn.Module):
 
     def forward(self, x):
         '''
-        input: x: [ref im, supp im, initial flow] - (B, 8, H, W)
+        input: x: [ref im, nbr im, initial flow] - (B, 8, H, W)
         output: estimated flow - (B, 2, H, W)
         '''
         return self.block(x)
@@ -56,24 +56,24 @@ class SpyNet(nn.Module):
 
         self.blocks = nn.ModuleList([SpyNet_Block() for _ in range(4)])
 
-    def forward(self, ref, supp):
+    def forward(self, ref, nbr):
         '''Estimating optical flow in coarse level, upsample, and estimate in fine level
         input: ref: reference image - [B, 3, H, W]
-               supp: the image to be warped - [B, 3, H, W]
+               nbr: the neighboring image to be warped - [B, 3, H, W]
         output: estimated optical flow - [B, 2, H, W]
         '''
         B, C, H, W = ref.size()
         ref = [ref]
-        supp = [supp]
+        nbr = [nbr]
 
         for _ in range(3):
             ref.insert(
                 0,
                 nn.functional.avg_pool2d(input=ref[0], kernel_size=2, stride=2,
                                          count_include_pad=False))
-            supp.insert(
+            nbr.insert(
                 0,
-                nn.functional.avg_pool2d(input=supp[0], kernel_size=2, stride=2,
+                nn.functional.avg_pool2d(input=nbr[0], kernel_size=2, stride=2,
                                          count_include_pad=False))
 
         flow = torch.zeros(B, 2, H // 16, W // 16).type_as(ref[0])
@@ -81,15 +81,8 @@ class SpyNet(nn.Module):
         for i in range(4):
             flow_up = nn.functional.interpolate(input=flow, scale_factor=2, mode='bilinear',
                                                 align_corners=True) * 2.0
-
-            # if the sizes of upsampling and downsampling are not the same, apply zero-padding.
-            if flow_up.size(2) != ref[i].size(2):
-                flow_up = nn.functional.pad(input=flow_up, pad=[0, 0, 0, 1], mode='replicate')
-            if flow_up.size(3) != ref[i].size(3):
-                flow_up = nn.functional.pad(input=flow_up, pad=[0, 1, 0, 0], mode='replicate')
-
             flow = flow_up + self.blocks[i](torch.cat(
-                [ref[i], flow_warp(supp[i], flow_up.permute(0, 2, 3, 1)), flow_up], 1))
+                [ref[i], flow_warp(nbr[i], flow_up.permute(0, 2, 3, 1)), flow_up], 1))
         return flow
 
 
@@ -117,8 +110,8 @@ class TOFlow(nn.Module):
         B, T, C, H, W = x.size()
         x = normalize(x.view(-1, C, H, W)).view(B, T, C, H, W)
 
-        x_ref = x[:, 3, :, :, :]
         ref_idx = 3
+        x_ref = x[:, ref_idx, :, :, :]
 
         # In the official torch code, the 0-th frame is the reference frame
         if self.adapt_official:
@@ -130,9 +123,9 @@ class TOFlow(nn.Module):
             if i == ref_idx:
                 x_warped.append(x_ref)
             else:
-                x_supp = x[:, i, :, :, :]
-                flow = self.SpyNet(x_ref, x_supp).permute(0, 2, 3, 1)
-                x_warped.append(flow_warp(x_supp, flow))
+                x_nbr = x[:, i, :, :, :]
+                flow = self.SpyNet(x_ref, x_nbr).permute(0, 2, 3, 1)
+                x_warped.append(flow_warp(x_nbr, flow))
         x_warped = torch.stack(x_warped, dim=1)
 
         x = x_warped.view(B, -1, H, W)
