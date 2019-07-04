@@ -341,5 +341,5 @@ def test_lmdb(dataroot, dataset='REDS'):
 if __name__ == "__main__":
     # vimeo90k()
     # REDS()
-    Youku()
-    # test_lmdb('/mnt/dataset/youku_data/round1/train/HR_frames.lmdb', 'Youku')
+    # Youku()
+    test_lmdb('/mnt/dataset/youku_data/round1/train/HR_frames.lmdb', 'Youku')
