@@ -31,11 +31,11 @@ datasets:
 #### network structures
 network_G:
   which_model_G: EDVR
-  nf: 64
+  nf: 64 # 128 in paper
   nframes: 5
   groups: 8
   front_RBs: 5
-  back_RBs: 10
+  back_RBs: 10 # 40 in paper
   predeblur: false
   HR_in: false
   w_TSA: false

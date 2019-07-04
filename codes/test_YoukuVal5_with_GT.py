@@ -1,5 +1,5 @@
 '''
-test Vid4 (SR) and REDS4 (SR-clean, SR-blur, deblur-clean, deblur-compression) datasets
+test YoukuVal5 (SR-blur) datasets
 write to txt log file
 '''
 
@@ -10,6 +10,7 @@ import logging
 import numpy as np
 import cv2
 import torch
+import torch.nn.functional as F
 
 import utils.util as util
 import data.util as data_util
@@ -20,14 +21,16 @@ def main():
     #################
     # configurations
     #################
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    data_mode = 'sharp_bicubic'  # Vid4 | sharp_bicubic | blur_bicubic | blur | blur_comp
+    os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+    data_mode = 'Val5'  # Val5 | Vid4 | sharp_bicubic | blur_bicubic | blur | blur_comp
     # Vid4: SR
     # REDS4: sharp_bicubic (SR-clean), blur_bicubic (SR-blur);
     #        blur (deblur-clean), blur_comp (deblur-compression).
 
     #### model
-    if data_mode == 'Vid4':
+    if data_mode == 'Val5':
+        model_path = '../experiments/pretrained_models/EDVRwTSA_youku.pth'
+    elif data_mode == 'Vid4':
         model_path = '../experiments/pretrained_models/EDVR_Vimeo90K_SR_L.pth'
     elif data_mode == 'sharp_bicubic':
         model_path = '../experiments/pretrained_models/EDVRwTSA_600000_G.pth' # EDVR_REDS_SR_L.pth
@@ -51,17 +54,19 @@ def main():
     model = EDVR_arch.EDVR(64, N_in, 8, 5, 10, predeblur=predeblur, HR_in=HR_in, w_TSA=w_TSA) # nf: 128 and back_RBs:40 in paper, and 64 and 10 in option files
 
     #### dataset
-    if data_mode == 'Vid4':
+    if data_mode == 'Val5':
+        test_dataset_folder = '/mnt/dataset/youku_data/round1_val5_input_frames/'
+    elif data_mode == 'Vid4':
         test_dataset_folder = '../datasets/Vid4/BIx4/*'
     else:
         test_dataset_folder = '../datasets/REDS4/{}/*'.format(data_mode)
 
     #### evaluation
-    flip_test = False
+    flip_test = True
     crop_border = 0
     border_frame = N_in // 2  # border frames when evaluate
     # temporal padding mode
-    if data_mode == 'Vid4' or data_mode == 'sharp_bicubic':
+    if data_mode == 'Val5' or data_mode == 'Vid4' or data_mode == 'sharp_bicubic':
         padding = 'new_info'
     else:
         padding = 'replicate'
@@ -136,14 +141,28 @@ def main():
 
     def single_forward(model, imgs_in):
         with torch.no_grad():
+            if data_mode == 'Val5':
+                padding_h, padding_w = imgs_in.size(-2) % 4 // 2, imgs_in.size(-1) % 4 //2
+                imgs_in = F.pad(imgs_in, pad=(padding_w, padding_w, padding_h, padding_h))
             model_output = model(imgs_in)
             if isinstance(model_output, list) or isinstance(model_output, tuple):
                 output = model_output[0]
             else:
                 output = model_output
+            
+            if data_mode == 'Val5':
+                if padding_w == 0:
+                    output = output[:, :, padding_h*4:-padding_h*4, :]
+                elif padding_h == 0:
+                    output = output[:, :, :, padding_w*4:-padding_w*4]
+                else:
+                    output = output[:, :, padding_h*4:-padding_h*4, padding_w*4:-padding_w*4]
         return output
 
-    sub_folder_l = sorted(glob.glob(test_dataset_folder))
+    if data_mode == 'Val5':
+        sub_folder_l = [test_dataset_folder]
+    else:
+        sub_folder_l = sorted(glob.glob(test_dataset_folder))
     #### set up the models
     model.load_state_dict(torch.load(model_path), strict=True)
     model.eval()
@@ -159,7 +178,10 @@ def main():
         save_sub_folder = osp.join(save_folder, sub_folder_name)
 
         img_path_l = sorted(glob.glob(sub_folder + '/*'))
-        max_idx = len(img_path_l)
+        if data_mode=='Val5':
+            max_idx = 100
+        else:
+            max_idx = len(img_path_l)
 
         if save_imgs:
             util.mkdirs(save_sub_folder)
@@ -168,21 +190,37 @@ def main():
         imgs = read_seq_imgs(sub_folder)
         #### read GT images
         img_GT_l = []
-        if data_mode == 'Vid4':
+        if data_mode == 'Val5':
+            sub_folder_GT = osp.join(sub_folder.replace('input', 'label'), '*')
+        elif data_mode == 'Vid4':
             sub_folder_GT = osp.join(sub_folder.replace('/BIx4/', '/GT/'), '*')
         else:
             sub_folder_GT = osp.join(sub_folder.replace('/{}/'.format(data_mode), '/GT/'), '*')
         for img_GT_path in sorted(glob.glob(sub_folder_GT)):
+            # print(img_GT_path)
             img_GT_l.append(read_image(img_GT_path))
 
         avg_psnr, avg_psnr_border, avg_psnr_center = 0, 0, 0
         cal_n_border, cal_n_center = 0, 0
+        if data_mode == 'Val5': 
+            base_index = 0
 
         # process each image
         for img_idx, img_path in enumerate(img_path_l):
-            c_idx = int(osp.splitext(osp.basename(img_path))[0])
+            if data_mode == 'Val5':
+                c_idx = int(osp.basename(img_path)[-7:-4]) - 1
+            else:
+                c_idx = int(osp.splitext(osp.basename(img_path))[0])
+
             select_idx = index_generation(c_idx, max_idx, N_in, padding=padding)
+            # print(img_path, c_idx, select_idx)
             # get input images
+            
+            if data_mode == 'Val5':
+                if img_idx > 0 and img_idx % 100 == 0:
+                    base_index += 100
+                select_idx = [idx + base_index for idx in  select_idx]
+
             imgs_in = imgs.index_select(0, torch.LongTensor(select_idx)).unsqueeze(0).to(device)
             output = single_forward(model, imgs_in)
             output_f = output.data.float().cpu().squeeze(0)
@@ -215,8 +253,8 @@ def main():
             #### calculate PSNR
             output = output / 255.
             GT = np.copy(img_GT_l[img_idx])
-            # For REDS, evaluate on RGB channels; for Vid4, evaluate on Y channels
-            if data_mode == 'Vid4':  # bgr2y, [0, 1]
+            # For REDS, evaluate on RGB channels; for Vid4 and Val5, evaluate on Y channels
+            if data_mode == 'Vid4' or data_mode == 'Val5':  # bgr2y, [0, 1]
                 GT = data_util.bgr2ycbcr(GT)
                 output = data_util.bgr2ycbcr(output)
             if crop_border == 0:
@@ -228,7 +266,8 @@ def main():
             crt_psnr = util.calculate_psnr(cropped_output * 255, cropped_GT * 255)
             logger.info('{:3d} - {:25}.png \tPSNR: {:.6f} dB'.format(img_idx + 1, c_idx, crt_psnr))
 
-            if img_idx >= border_frame and img_idx < max_idx - border_frame:  # center frames
+            if (img_idx >= border_frame and img_idx < max_idx - border_frame) or \
+                (img_idx % 100 >= border_frame and img_idx % 100 < max_idx - border_frame):  # center frames
                 avg_psnr_center += crt_psnr
                 cal_n_center += 1
             else:  # border frames
