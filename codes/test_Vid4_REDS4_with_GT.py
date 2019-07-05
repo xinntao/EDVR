@@ -21,22 +21,39 @@ def main():
     # configurations
     #################
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    data_mode = 'Vid4'  # Vid4 | sharp_bicubic | blur_bicubic | blur | blur_comp
+    data_mode = 'sharp_bicubic'  # Vid4 | sharp_bicubic | blur_bicubic | blur | blur_comp
     # Vid4: SR
     # REDS4: sharp_bicubic (SR-clean), blur_bicubic (SR-blur);
     #        blur (deblur-clean), blur_comp (deblur-compression).
-
+    stage = 1  # 1 or 2, use two stage strategy for REDS dataset.
+    flip_test = False
+    ############################################################################
     #### model
     if data_mode == 'Vid4':
-        model_path = '../experiments/pretrained_models/EDVR_Vimeo90K_SR_L.pth'
+        if stage == 1:
+            model_path = '../experiments/pretrained_models/EDVR_Vimeo90K_SR_L.pth'
+        else:
+            raise ValueError('Vid4 does not support stage 2.')
     elif data_mode == 'sharp_bicubic':
-        model_path = '../experiments/pretrained_models/EDVR_REDS_SR_L.pth'
+        if stage == 1:
+            model_path = '../experiments/pretrained_models/EDVR_REDS_SR_L.pth'
+        else:
+            model_path = '../experiments/pretrained_models/EDVR_REDS_SR_Stage2.pth'
     elif data_mode == 'blur_bicubic':
-        model_path = '../experiments/pretrained_models/EDVR_REDS_SRblur_L.pth'
+        if stage == 1:
+            model_path = '../experiments/pretrained_models/EDVR_REDS_SRblur_L.pth'
+        else:
+            model_path = '../experiments/pretrained_models/EDVR_REDS_SRblur_Stage2.pth'
     elif data_mode == 'blur':
-        model_path = '../experiments/pretrained_models/EDVR_REDS_deblur_L.pth'
+        if stage == 1:
+            model_path = '../experiments/pretrained_models/EDVR_REDS_deblur_L.pth'
+        else:
+            model_path = '../experiments/pretrained_models/EDVR_REDS_deblur_Stage2.pth'
     elif data_mode == 'blur_comp':
-        model_path = '../experiments/pretrained_models/EDVR_REDS_deblurcomp_L.pth'
+        if stage == 1:
+            model_path = '../experiments/pretrained_models/EDVR_REDS_deblurcomp_L.pth'
+        else:
+            model_path = '../experiments/pretrained_models/EDVR_REDS_deblurcomp_Stage2.pth'
     else:
         raise NotImplementedError
     if data_mode == 'Vid4':
@@ -44,20 +61,28 @@ def main():
     else:
         N_in = 5
     predeblur, HR_in = False, False
+    back_RBs = 40
     if data_mode == 'blur_bicubic':
         predeblur = True
     if data_mode == 'blur' or data_mode == 'blur_comp':
         predeblur, HR_in = True, True
-    model = EDVR_arch.EDVR(128, N_in, 8, 5, 40, predeblur=predeblur, HR_in=HR_in)
+    if stage == 2:
+        HR_in = True
+        back_RBs = 20
+    model = EDVR_arch.EDVR(128, N_in, 8, 5, back_RBs, predeblur=predeblur, HR_in=HR_in)
 
     #### dataset
     if data_mode == 'Vid4':
         test_dataset_folder = '../datasets/Vid4/BIx4/*'
+        GT_dataset_folder = '../datasets/Vid4/GT/*'
     else:
-        test_dataset_folder = '../datasets/REDS4/{}/*'.format(data_mode)
+        if stage == 1:
+            test_dataset_folder = '../datasets/REDS4/{}/*'.format(data_mode)
+        else:
+            raise ValueError('You should modify the test_dataset_folder path for stage 2')
+        GT_dataset_folder = '../datasets/REDS4/GT/*'
 
     #### evaluation
-    flip_test = False
     crop_border = 0
     border_frame = N_in // 2  # border frames when evaluate
     # temporal padding mode
@@ -66,7 +91,7 @@ def main():
     else:
         padding = 'replicate'
     save_imgs = True
-    ############################################################################
+
     device = torch.device('cuda')
     save_folder = '../results/{}'.format(data_mode)
     util.mkdirs(save_folder)
@@ -144,6 +169,7 @@ def main():
         return output
 
     sub_folder_l = sorted(glob.glob(test_dataset_folder))
+    sub_folder_GT_l = sorted(glob.glob(GT_dataset_folder))
     #### set up the models
     model.load_state_dict(torch.load(model_path), strict=True)
     model.eval()
@@ -153,7 +179,7 @@ def main():
     sub_folder_name_l = []
 
     # for each sub-folder
-    for sub_folder in sub_folder_l:
+    for sub_folder, sub_folder_GT in zip(sub_folder_l, sub_folder_GT_l):
         sub_folder_name = sub_folder.split('/')[-1]
         sub_folder_name_l.append(sub_folder_name)
         save_sub_folder = osp.join(save_folder, sub_folder_name)
@@ -168,11 +194,7 @@ def main():
         imgs = read_seq_imgs(sub_folder)
         #### read GT images
         img_GT_l = []
-        if data_mode == 'Vid4':
-            sub_folder_GT = osp.join(sub_folder.replace('/BIx4/', '/GT/'), '*')
-        else:
-            sub_folder_GT = osp.join(sub_folder.replace('/{}/'.format(data_mode), '/GT/'), '*')
-        for img_GT_path in sorted(glob.glob(sub_folder_GT)):
+        for img_GT_path in sorted(glob.glob(osp.join(sub_folder_GT, '*'))):
             img_GT_l.append(read_image(img_GT_path))
 
         avg_psnr, avg_psnr_border, avg_psnr_center = 0, 0, 0
