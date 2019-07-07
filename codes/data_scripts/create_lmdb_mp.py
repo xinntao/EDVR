@@ -34,6 +34,8 @@ def vimeo90k():
     '''
     #### configurations
     mode = 'GT'  # GT | LR
+    read_all_imgs = False  # whether real all images to the memory. Set False with limited memory
+    BATCH = 5000  # After BATCH images, lmdb commits, if read_all_imgs = False
     if mode == 'GT':
         img_folder = '/home/xtwang/datasets/vimeo90k/vimeo_septuplet/sequences'
         lmdb_save_path = '/home/xtwang/datasets/vimeo90k/vimeo90k_train_GT.lmdb'
@@ -74,40 +76,48 @@ def vimeo90k():
         all_img_list = [v for v in all_img_list if v.endswith('im4.png')]
         keys = [v for v in keys if v.endswith('_4')]
 
-    #### read all images to memory (multiprocessing)
-    dataset = {}  # store all image data. list cannot keep the order, use dict
-    print('Read images with multiprocessing, #thread: {} ...'.format(n_thread))
-    pbar = util.ProgressBar(len(all_img_list))
+    if read_all_imgs:
+        #### read all images to memory (multiprocessing)
+        dataset = {}  # store all image data. list cannot keep the order, use dict
+        print('Read images with multiprocessing, #thread: {} ...'.format(n_thread))
+        pbar = util.ProgressBar(len(all_img_list))
 
-    def mycallback(arg):
-        '''get the image data and update pbar'''
-        key = arg[0]
-        dataset[key] = arg[1]
-        pbar.update('Reading {}'.format(key))
+        def mycallback(arg):
+            '''get the image data and update pbar'''
+            key = arg[0]
+            dataset[key] = arg[1]
+            pbar.update('Reading {}'.format(key))
 
-    pool = Pool(n_thread)
-    for path, key in zip(all_img_list, keys):
-        pool.apply_async(reading_image_worker, args=(path, key), callback=mycallback) # reading_image_worker return (key, img)
-    pool.close()
-    pool.join()
-    print('Finish reading {} images.\nWrite lmdb...'.format(len(all_img_list)))
+        pool = Pool(n_thread)
+        for path, key in zip(all_img_list, keys):
+            pool.apply_async(reading_image_worker, args=(path, key), callback=mycallback) # reading_image_worker return (key, img)
+        pool.close()
+        pool.join()
+        print('Finish reading {} images.\nWrite lmdb...'.format(len(all_img_list)))
 
     #### create lmdb environment
-    data_size_per_img = dataset['00001_0001_4'].nbytes
+    data_size_per_img = cv2.imread(all_img_list[0], cv2.IMREAD_UNCHANGED).nbytes
     print('data size per image is: ', data_size_per_img)
     data_size = data_size_per_img * len(all_img_list)
     env = lmdb.open(lmdb_save_path, map_size=data_size * 10)
 
     #### write data to lmdb
     pbar = util.ProgressBar(len(all_img_list))
-    with env.begin(write=True) as txn:
-        for key in keys:
-            pbar.update('Write {}'.format(key))
-            key_byte = key.encode('ascii')
-            data = dataset[key]
-            H, W, C = data.shape  # fixed shape
-            assert H == H_dst and W == W_dst and C == 3, 'different shape.'
-            txn.put(key_byte, data)
+    txn = env.begin(write=True)
+    idx = 1
+    for path, key in zip(all_img_list, keys):
+        idx = idx + 1
+        pbar.update('Write {}'.format(key))
+        key_byte = key.encode('ascii')
+        data = dataset[key] if read_all_imgs else cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        H, W, C = data.shape  # fixed shape
+        assert H == H_dst and W == W_dst and C == 3, 'different shape.'
+        txn.put(key_byte, data)
+        if not read_all_imgs and idx % BATCH == 1:
+            txn.commit()
+            txn = env.begin(write=True)
+    txn.commit()
+    env.close()
     print('Finish writing lmdb.')
 
     #### create meta information
@@ -134,6 +144,8 @@ def REDS():
     '''
     #### configurations
     mode = 'train_sharp'
+    read_all_imgs = False  # whether real all images to the memory. Set False with limited memory
+    BATCH = 5000  # After BATCH images, lmdb commits, if read_all_imgs = False
     # train_sharp | train_sharp_bicubic | train_blur_bicubic| train_blur | train_blur_comp
     if mode == 'train_sharp':
         img_folder = '/mnt/dataset/REDS/train_sharp'
@@ -174,26 +186,27 @@ def REDS():
         b = split_rlt[-1].split('.png')[0]
         keys.append(a + '_' + b)
 
-    #### read all images to memory (multiprocessing)
-    dataset = {}  # store all image data. list cannot keep the order, use dict
-    print('Read images with multiprocessing, #thread: {} ...'.format(n_thread))
-    pbar = util.ProgressBar(len(all_img_list))
+    if read_all_imgs:
+        #### read all images to memory (multiprocessing)
+        dataset = {}  # store all image data. list cannot keep the order, use dict
+        print('Read images with multiprocessing, #thread: {} ...'.format(n_thread))
+        pbar = util.ProgressBar(len(all_img_list))
 
-    def mycallback(arg):
-        '''get the image data and update pbar'''
-        key = arg[0]
-        dataset[key] = arg[1]
-        pbar.update('Reading {}'.format(key))
+        def mycallback(arg):
+            '''get the image data and update pbar'''
+            key = arg[0]
+            dataset[key] = arg[1]
+            pbar.update('Reading {}'.format(key))
 
-    pool = Pool(n_thread)
-    for path, key in zip(all_img_list, keys):
-        pool.apply_async(reading_image_worker, args=(path, key), callback=mycallback)
-    pool.close()
-    pool.join()
-    print('Finish reading {} images.\nWrite lmdb...'.format(len(all_img_list)))
+        pool = Pool(n_thread)
+        for path, key in zip(all_img_list, keys):
+            pool.apply_async(reading_image_worker, args=(path, key), callback=mycallback)
+        pool.close()
+        pool.join()
+        print('Finish reading {} images.\nWrite lmdb...'.format(len(all_img_list)))
 
     #### create lmdb environment
-    data_size_per_img = dataset['000_00000000'].nbytes
+    data_size_per_img = cv2.imread(all_img_list[0], cv2.IMREAD_UNCHANGED).nbytes
     if 'flow' in mode:
         data_size_per_img = dataset['000_00000002_n1'].nbytes
     print('data size per image is: ', data_size_per_img)
@@ -202,18 +215,25 @@ def REDS():
 
     #### write data to lmdb
     pbar = util.ProgressBar(len(all_img_list))
-    with env.begin(write=True) as txn:
-        for key in keys:
-            pbar.update('Write {}'.format(key))
-            key_byte = key.encode('ascii')
-            data = dataset[key]
-            if 'flow' in mode:
-                H, W = data.shape
-                assert H == H_dst and W == W_dst, 'different shape.'
-            else:
-                H, W, C = data.shape  # fixed shape
-                assert H == H_dst and W == W_dst and C == 3, 'different shape.'
-            txn.put(key_byte, data)
+    txn = env.begin(write=True)
+    idx = 1
+    for path, key in zip(all_img_list, keys):
+        idx = idx + 1
+        pbar.update('Write {}'.format(key))
+        key_byte = key.encode('ascii')
+        data = dataset[key] if read_all_imgs else cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        if 'flow' in mode:
+            H, W = data.shape
+            assert H == H_dst and W == W_dst, 'different shape.'
+        else:
+            H, W, C = data.shape  # fixed shape
+            assert H == H_dst and W == W_dst and C == 3, 'different shape.'
+        txn.put(key_byte, data)
+        if not read_all_imgs and idx % BATCH == 1:
+            txn.commit()
+            txn = env.begin(write=True)
+    txn.commit()
+    env.close()
     print('Finish writing lmdb.')
 
     #### create meta information

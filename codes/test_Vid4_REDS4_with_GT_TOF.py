@@ -1,5 +1,5 @@
 """
-DUF testing script, test Vid4 (SR) and REDS4 (SR-clean) datasets
+TOF testing script, test Vid4 (SR) and REDS4 (SR-clean) datasets
 write to txt log file
 """
 
@@ -13,7 +13,7 @@ import torch
 
 import utils.util as util
 import data.util as data_util
-import models.modules.DUF_arch as DUF_arch
+import models.modules.TOF_arch as TOF_arch
 
 
 def main():
@@ -23,35 +23,23 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     data_mode = 'Vid4'  # Vid4 | sharp_bicubic (REDS)
 
-    # Possible combinations: (2, 16), (3, 16), (4, 16), (4, 28), (4, 52)
-    scale = 4
-    layer = 52
-    assert (scale, layer) in [(2, 16), (3, 16), (4, 16), (4, 28),
-                              (4, 52)], 'Unrecognized (scale, layer) combination'
-
     # model
     N_in = 7
-    model_path = '../experiments/pretrained_models/DUF_x{}_{}L_official.pth'.format(scale, layer)
+    model_path = '../experiments/pretrained_models/TOF_official.pth'
     adapt_official = True if 'official' in model_path else False
-    DUF_downsampling = True  # True | False
-    if layer == 16:
-        model = DUF_arch.DUF_16L(scale=scale, adapt_official=adapt_official)
-    elif layer == 28:
-        model = DUF_arch.DUF_28L(scale=scale, adapt_official=adapt_official)
-    elif layer == 52:
-        model = DUF_arch.DUF_52L(scale=scale, adapt_official=adapt_official)
+    model = TOF_arch.TOFlow(adapt_official=adapt_official)
 
     #### dataset
     if data_mode == 'Vid4':
-        test_dataset_folder = '../datasets/Vid4/BIx4/*'
-    else:  # sharp_bicubic (REDS)
+        test_dataset_folder = '../datasets/Vid4/BIx4up_direct/*'
+    else:
         test_dataset_folder = '../datasets/REDS4/{}/*'.format(data_mode)
 
     #### evaluation
-    crop_border = 8
+    crop_border = 0
     border_frame = N_in // 2  # border frames when evaluate
     # temporal padding mode
-    padding = 'new_info'  # different from the official testing codes, which pads zeros.
+    padding = 'new_info'  # different from the official setting
     save_imgs = True
     ############################################################################
     device = torch.device('cuda')
@@ -155,18 +143,11 @@ def main():
         #### read GT images
         img_GT_l = []
         if data_mode == 'Vid4':
-            sub_folder_GT = osp.join(sub_folder.replace('/BIx4/', '/GT/'), '*')
+            sub_folder_GT = osp.join(sub_folder.replace('/BIx4up_direct/', '/GT/'), '*')
         else:
             sub_folder_GT = osp.join(sub_folder.replace('/{}/'.format(data_mode), '/GT/'), '*')
         for img_GT_path in sorted(glob.glob(sub_folder_GT)):
             img_GT_l.append(read_image(img_GT_path))
-
-        # When using the downsampling in DUF official code, we downsample the HR images
-        if DUF_downsampling:
-            sub_folder = sub_folder_GT
-            img_path_l = sorted(glob.glob(sub_folder))
-            max_idx = len(img_path_l)
-            imgs = read_seq_imgs(sub_folder[:-2])
 
         avg_psnr, avg_psnr_border, avg_psnr_center = 0, 0, 0
         cal_n_border, cal_n_center = 0, 0
@@ -177,22 +158,7 @@ def main():
             select_idx = index_generation(c_idx, max_idx, N_in, padding=padding)
             # get input images
             imgs_in = imgs.index_select(0, torch.LongTensor(select_idx)).unsqueeze(0).to(device)
-
-            # Downsample the HR images
-            H, W = imgs_in.size(3), imgs_in.size(4)
-            if DUF_downsampling:
-                imgs_in = util.DUF_downsample(imgs_in, scale=scale)
-
             output = single_forward(model, imgs_in)
-
-            # Crop to the original shape
-            if scale == 3:
-                pad_h = 3 - (H % 3)
-                pad_w = 3 - (W % 3)
-                if pad_h > 0:
-                    output = output[:, :, :-pad_h, :]
-                if pad_w > 0:
-                    output = output[:, :, :, :-pad_w]
             output_f = output.data.float().cpu().squeeze(0)
 
             output = util.tensor2img(output_f)
