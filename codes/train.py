@@ -191,6 +191,8 @@ def main():
         model.save('latest')
         logger.info('End of training.')
 
+    tb_logger.close()
+
 
 if __name__ == '__main__':
     main()
