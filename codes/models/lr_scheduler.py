@@ -12,6 +12,7 @@ class MultiStepLR_Restart(_LRScheduler):
         self.gamma = gamma
         self.clear_state = clear_state
         self.restarts = restarts if restarts else [0]
+        self.restarts = [v + 1 for v in self.restarts]
         self.restart_weights = weights if weights else [1]
         assert len(self.restarts) == len(
             self.restart_weights), 'restarts and their weights do not match.'
@@ -37,6 +38,7 @@ class CosineAnnealingLR_Restart(_LRScheduler):
         self.T_max = self.T_period[0]  # current T period
         self.eta_min = eta_min
         self.restarts = restarts if restarts else [0]
+        self.restarts = [v + 1 for v in self.restarts]
         self.restart_weights = weights if weights else [1]
         self.last_restart = 0
         assert len(self.restarts) == len(
