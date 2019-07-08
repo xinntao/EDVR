@@ -78,36 +78,36 @@ class CALayer(nn.Module):
 
 ## Residual Channel Attention Block (RCAB)
 class RCAB(nn.Module):
-    def __init__(
-        self, conv, n_feat, kernel_size, reduction,
-        bias=True, bn=False, act=nn.ReLU(True), res_scale=1):
+    def __init__(self, n_feat, kernel_size, 
+                 reduction=16, act=nn.ReLU(True)):
 
         super(RCAB, self).__init__()
         modules_body = []
         for i in range(2):
-            modules_body.append(conv(n_feat, n_feat, kernel_size, bias=bias))
-            if bn: modules_body.append(nn.BatchNorm2d(n_feat))
+            modules_body.append(nn.Conv2d(
+                n_feat, n_feat, kernel_size, 1, 1, bias=True
+            ))
             if i == 0: modules_body.append(act)
         modules_body.append(CALayer(n_feat, reduction))
         self.body = nn.Sequential(*modules_body)
-        self.res_scale = res_scale
 
     def forward(self, x):
         res = self.body(x)
-        #res = self.body(x).mul(self.res_scale)
         res += x
         return res
 
 ## Residual Group (RG)
 class ResidualGroup(nn.Module):
-    def __init__(self, conv, n_feat, kernel_size, reduction, act, res_scale, n_resblocks):
+    def __init__(self, n_feat, n_resblocks, kernel_size=3, reduction=16):
         super(ResidualGroup, self).__init__()
         modules_body = []
-        modules_body = [
-            RCAB(
-                conv, n_feat, kernel_size, reduction, bias=True, bn=False, act=nn.ReLU(True), res_scale=1) \
-            for _ in range(n_resblocks)]
-        modules_body.append(conv(n_feat, n_feat, kernel_size))
+        modules_body = [RCAB(
+                n_feat, kernel_size, reduction, act=nn.ReLU(True)
+            ) for _ in range(n_resblocks)
+        ]
+        modules_body.append(nn.Conv2d(
+            n_feat, n_feat, kernel_size, 1, 1, bias=True
+        ))
         self.body = nn.Sequential(*modules_body)
 
     def forward(self, x):
