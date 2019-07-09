@@ -78,17 +78,17 @@ class CALayer(nn.Module):
 
 ## Residual Channel Attention Block (RCAB)
 class RCAB(nn.Module):
-    def __init__(self, n_feat, kernel_size, 
+    def __init__(self, nf, kernel_size=3, 
                  reduction=16, act=nn.ReLU(True)):
 
         super(RCAB, self).__init__()
         modules_body = []
         for i in range(2):
             modules_body.append(nn.Conv2d(
-                n_feat, n_feat, kernel_size, 1, 1, bias=True
+                nf, nf, kernel_size, 1, 1, bias=True
             ))
             if i == 0: modules_body.append(act)
-        modules_body.append(CALayer(n_feat, reduction))
+        modules_body.append(CALayer(nf, reduction))
         self.body = nn.Sequential(*modules_body)
 
     def forward(self, x):
@@ -98,15 +98,15 @@ class RCAB(nn.Module):
 
 ## Residual Group (RG)
 class ResidualGroup(nn.Module):
-    def __init__(self, n_feat, n_resblocks, kernel_size=3, reduction=16):
+    def __init__(self, nf, res_blocks=10, reduction=16):
         super(ResidualGroup, self).__init__()
         modules_body = []
         modules_body = [RCAB(
-                n_feat, kernel_size, reduction, act=nn.ReLU(True)
-            ) for _ in range(n_resblocks)
+                nf, 3, reduction, act=nn.ReLU(True)
+            ) for _ in range(res_blocks)
         ]
         modules_body.append(nn.Conv2d(
-            n_feat, n_feat, kernel_size, 1, 1, bias=True
+            nf, nf, 3, 1, 1, bias=True
         ))
         self.body = nn.Sequential(*modules_body)
 

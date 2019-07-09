@@ -8,15 +8,17 @@ from models.modules.EDVR_arch import PCD_Align, TSA_Fusion
 
 
 class VSRUN(nn.Module):
-    def __init__(self, nf=32, nframes=5, groups=8, back_RBs=10, center=None,
-                 w_TSA=True):
+    def __init__(self, nf=32, nframes=5, groups=8, res_blocks=10, 
+                 res_groups=2, center=None, w_TSA=True):
         super(VSRUN, self).__init__()
         self.nf = nf
         self.center = nframes // 2 if center is None else center
         self.nframes = nframes
         self.w_TSA = w_TSA
-        ResidualBlock_noBN_f1 = functools.partial(mutil.ResidualBlock_noBN, nf=4*nf)
-        ResidualBlock_noBN_f2 = functools.partial(mutil.ResidualBlock_noBN, nf=2*nf)
+        ReconstructionBlock1 = functools.partial(mutil.ResidualBlock_noBN, nf=4*nf,
+                                                 res_blocks=res_blocks//res_groups, reduction=nf)
+        ReconstructionBlock2 = functools.partial(mutil.ResidualBlock_noBN, nf=2*nf,
+                                                 res_blocks=res_blocks//res_groups, reduction=nf)
 
         self.head = nn.Conv2d(3, nf, 3, 1, 1, bias=True)
         self.upsample = nn.Upsample(scale_factor=4,
@@ -46,16 +48,16 @@ class VSRUN(nn.Module):
             self.tsa_fusion2 = nn.Conv2d(nframes * 2 * nf, 2 * nf, 1, 1, bias=True)
             self.tsa_fusion3 = nn.Conv2d(nframes * nf, nf, 1, 1, bias=True)
         
-        self.res_blocks1 = mutil.make_layer(mutil.ResidualBlock_noBN, back_RBs//2)
-        self.res_blocks2 = mutil.make_layer(mutil.ResidualBlock_noBN, back_RBs//2)
+        self.recon_trunk1 = mutil.make_layer(ReconstructionBlock1, res_groups//2)
+        self.recon_trunk2 = mutil.make_layer(ReconstructionBlock2, res_groups//2)
         
         self.up1 = nn.Sequential(
-            ForwardConcat(ResidualBlock_noBN_f1, 4, 4*nf),
+            ForwardConcat(mutil.ResidualBlock_noBN, 4, 4*nf),
             nn.Conv2d(4*nf, 2*nf, 1, 1, 1, bias=True),
             nn.PixelShuffle(2)
         )
         self.up2 = nn.Sequential(
-            ForwardConcat(ResidualBlock_noBN_f2, 4, 2*nf),
+            ForwardConcat(mutil.ResidualBlock_noBN, 4, 2*nf),
             nn.Conv2d(2*nf, nf, 1, 1, 1, bias=True),
             nn.PixelShuffle(2)
         )
@@ -110,7 +112,7 @@ class VSRUN(nn.Module):
         x_fusion = self.fusion(self.tsa_fusion1, aligned_fea, (B, -1, H, W))
         
         # Reconstruct and upscale to 2x
-        x_up1 = self.up1(self.res_blocks1(x_fusion))
+        x_up1 = self.up1(self.recon_trunk1(x_fusion))
 
         # # Frames PCD Align and Fusion in 2x level
         L1_down = self.pcd_L1_conv1(L1_down)
@@ -125,7 +127,7 @@ class VSRUN(nn.Module):
 
         # concatenate features and upscale to 4x
         x_cat_2x = torch.cat((x_fusion, x_up1), -3)
-        x_up2 = self.up2(self.res_blocks2(x_cat_2x))
+        x_up2 = self.up2(self.recon_trunk2(x_cat_2x))
 
         # frames PCD Align and fusion in 4x level
         L1_down = self.pcd_L1_conv2(L1_down)
