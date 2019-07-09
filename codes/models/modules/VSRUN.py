@@ -137,8 +137,8 @@ class DCN_Align(nn.Module):
 
 
 class VSRUN(nn.Module):
-    def __init__(self, nf=32, nframes=5, groups=8, back_RBs=10, center=None,
-                 w_TSA=True):
+    def __init__(self, nf=32, nframes=5, groups=8, res_blocks=10, 
+                 res_groups=2, center=None, w_TSA=True):
         super(VSRUN, self).__init__()
         self.nf = nf
         self.center = nframes // 2 if center is None else center
