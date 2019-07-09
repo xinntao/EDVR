@@ -144,9 +144,10 @@ class VSRUN(nn.Module):
         self.center = nframes // 2 if center is None else center
         self.nframes = nframes
         self.w_TSA = w_TSA
-        ResidualBlock_noBN_f1 = functools.partial(mutil.ResidualBlock_noBN, nf=4*nf)
-        ResidualBlock_noBN_f2 = functools.partial(mutil.ResidualBlock_noBN, nf=2*nf)
-
+        ReconstructionBlock1 = functools.partial(mutil.ResidualBlock_noBN, nf=4*nf,
+                                                 res_blocks=res_blocks//res_groups, reduction=nf)
+        ReconstructionBlock2 = functools.partial(mutil.ResidualBlock_noBN, nf=2*nf,
+                                                 res_blocks=res_blocks//res_groups, reduction=nf)
         self.head = nn.Conv2d(3, nf, 3, 1, 1, bias=True)
         self.upsample = nn.Upsample(scale_factor=4,
                                     mode='bicubic', align_corners=False)
@@ -170,16 +171,16 @@ class VSRUN(nn.Module):
             self.tsa_fusion2 = nn.Conv2d(nframes * 2 * nf, 2 * nf, 1, 1, bias=True)
             self.tsa_fusion3 = nn.Conv2d(nframes * nf, nf, 1, 1, bias=True)
         
-        self.res_blocks1 = mutil.make_layer(mutil.ResidualBlock_noBN, back_RBs//2)
-        self.res_blocks2 = mutil.make_layer(mutil.ResidualBlock_noBN, back_RBs//2)
+        self.recon_trunk1 = mutil.make_layer(ReconstructionBlock1, res_groups//2)
+        self.recon_trunk2 = mutil.make_layer(ReconstructionBlock2, res_groups//2)
         
         self.up1 = nn.Sequential(
-            ForwardConcat(ResidualBlock_noBN_f1, 4, 4*nf),
+            ForwardConcat(mutil.ResidualBlock_noBN, 4, 4*nf),
             nn.Conv2d(4*nf, 2*nf, 1, 1, 1, bias=True),
             nn.PixelShuffle(2)
         )
         self.up2 = nn.Sequential(
-            ForwardConcat(ResidualBlock_noBN_f2, 4, 2*nf),
+            ForwardConcat(mutil.ResidualBlock_noBN, 4, 2*nf),
             nn.Conv2d(2*nf, nf, 1, 1, 1, bias=True),
             nn.PixelShuffle(2)
         )
@@ -245,7 +246,7 @@ class VSRUN(nn.Module):
         x_fusion = self.fusion(self.tsa_fusion1, aligned_fea, (B, -1, H, W))
         
         # Reconstruction and upscale 2x
-        x_up1 = self.up1(self.res_blocks1(x_fusion))
+        x_up1 = self.up1(self.recon_trunk1(x_fusion))
 
         # Frames DCN Align and Fusion 2
         ref_fea = x_down1.view(B, N, -1, 2 * H, 2 * W)
@@ -254,7 +255,7 @@ class VSRUN(nn.Module):
 
         # concat features and upscale (2x size of inputs)
         x_cat_2x = torch.cat((x_fusion, x_up1), -3)
-        x_up2 = self.up2(self.res_blocks2(x_cat_2x))
+        x_up2 = self.up2(self.recon_trunk2(x_cat_2x))
 
         # frames DCN Align and fusion 3
         ref_fea = x_head.view(B, N, -1, 4 * H, 4 * W)
