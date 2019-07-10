@@ -143,7 +143,7 @@ def main():
         with torch.no_grad():
             if data_mode == 'Val5':
                 padding_h, padding_w = imgs_in.size(-2) % 4 // 2, imgs_in.size(-1) % 4 //2
-                imgs_in = F.pad(imgs_in, pad=(padding_w, padding_w, padding_h, padding_h))
+                imgs_in = F.pad(imgs_in, pad=(padding_w, padding_w, padding_h, padding_h), mode='replicate')
             model_output = model(imgs_in)
             if isinstance(model_output, list) or isinstance(model_output, tuple):
                 output = model_output[0]

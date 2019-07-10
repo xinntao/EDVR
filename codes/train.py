@@ -79,7 +79,7 @@ def main():
                 logger.info(
                     'You are using PyTorch {}. Tensorboard will use [tensorboardX]'.format(version))
                 from tensorboardX import SummaryWriter
-            tb_logger = SummaryWriter(logdir='../tb_logger/' + opt['name']) # log_dir is wrong
+            tb_logger = SummaryWriter(log_dir='../tb_logger/' + opt['name']) # log_dir is only for tb-futrue and logdir for tensorboaedX
     else:
         util.setup_logger('base', opt['path']['log'], 'train', level=logging.INFO, screen=True)
         logger = logging.getLogger('base')

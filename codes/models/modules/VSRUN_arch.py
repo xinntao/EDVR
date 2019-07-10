@@ -47,8 +47,8 @@ class ForwardConcat(nn.Module):
 
 class PCD_Align_With_Offset(PCD_Align):
     """Use to align the feature only in one scale"""
-    def __init__(self, nf=64, groups=8):
-        super(PCD_Align_With_Offset, self).__init__()
+    def __init__(self, nf=32, groups=8):
+        super(PCD_Align_With_Offset, self).__init__(nf, groups)
 
     def forward(self, nbr_fea_l, ref_fea_l):
         '''align other neighboring frames to the reference frame in original spatial size
@@ -86,6 +86,52 @@ class PCD_Align_With_Offset(PCD_Align):
         return L1_fea, L1_offset
 
 
+class TSA_align_Bicubic(TSA_Fusion):
+    def __index__(self, nf=64, nframes=5, center=2):
+        super(TSA_align_Bicubic, self).__init__(nf, nframes, center)
+
+    def forward(self, aligned_fea):
+        B, N, C, H, W = aligned_fea.size()  # N video frames
+        #### temporal attention
+        emb_ref = self.tAtt_2(aligned_fea[:, self.center, :, :, :].clone())
+        emb = self.tAtt_1(aligned_fea.view(-1, C, H, W)).view(B, N, -1, H, W)  # [B, N, C(nf), H, W]
+
+        cor_l = []
+        for i in range(N):
+            emb_nbr = emb[:, i, :, :, :]
+            cor_tmp = torch.sum(emb_nbr * emb_ref, 1).unsqueeze(1)  # B, 1, H, W
+            cor_l.append(cor_tmp)
+        cor_prob = torch.sigmoid(torch.cat(cor_l, dim=1))  # B, N, H, W
+        cor_prob = cor_prob.unsqueeze(2).repeat(1, 1, C, 1, 1).view(B, -1, H, W)
+        aligned_fea = aligned_fea.view(B, -1, H, W) * cor_prob
+
+        #### fusion
+        fea = self.lrelu(self.fea_fusion(aligned_fea))
+
+        #### spatial attention
+        att = self.lrelu(self.sAtt_1(aligned_fea))
+        att_max = self.maxpool(att)
+        att_avg = self.avgpool(att)
+        att = self.lrelu(self.sAtt_2(torch.cat([att_max, att_avg], dim=1)))
+        # pyramid levels
+        att_L = self.lrelu(self.sAtt_L1(att))
+        att_max = self.maxpool(att_L)
+        att_avg = self.avgpool(att_L)
+        att_L = self.lrelu(self.sAtt_L2(torch.cat([att_max, att_avg], dim=1)))
+        att_L = self.lrelu(self.sAtt_L3(att_L))
+        att_L = F.interpolate(att_L, scale_factor=2, mode='bicubic', align_corners=False)
+
+        att = self.lrelu(self.sAtt_3(att))
+        att = att + att_L
+        att = self.lrelu(self.sAtt_4(att))
+        att = F.interpolate(att, scale_factor=2, mode='bicubic', align_corners=False)
+        att = self.sAtt_5(att)
+        att_add = self.sAtt_add_2(self.lrelu(self.sAtt_add_1(att)))
+        att = torch.sigmoid(att)
+
+        fea = fea * att * 2 + att_add
+        return fea
+
 class DCN_Align(nn.Module):
     """Use to align the feature only in one scale"""
     def __init__(self, nf=64, groups=8):
@@ -101,8 +147,9 @@ class DCN_Align(nn.Module):
 
         self.dcnpack = DCN_sep(nf, nf, 3, stride=1, padding=1, dilation=1,
                                   deformable_groups=groups)
+        self.fea_conv = nn.Conv2d(2*nf, nf, 3, 1, 1, bias=True)  # concat for fea
         # Cascading DCN
-        self.cas_offset_conv1 = nn.Conv2d(nf, nf, 3, 1, 1, bias=True)  # concat for diff
+        self.cas_offset_conv1 = nn.Conv2d(2*nf, nf, 3, 1, 1, bias=True)  # concat for diff
         self.cas_offset_conv2 = nn.Conv2d(nf, nf, 3, 1, 1, bias=True)
         self.cas_dcnpack = DCN_sep(nf, nf, 3, stride=1, padding=1, dilation=1,
                                    deformable_groups=groups)
@@ -115,17 +162,16 @@ class DCN_Align(nn.Module):
         '''
         offset = torch.cat([nbr_fea, ref_fea], dim=1)
         offset = self.lrelu(self.offset_conv1(offset))
-        
         low_offset = self.low_offset_conv(low_offset)
         low_offset = F.interpolate(low_offset, scale_factor=2, mode='bicubic', align_corners=False)
         
         offset = self.lrelu(self.offset_conv2(torch.cat([offset, low_offset * 2], dim=1)))
         offset = self.lrelu(self.offset_conv3(offset))
-        aligned_fea = self.L2_dcnpack(nbr_fea, offset)
+        aligned_fea = self.dcnpack(nbr_fea, offset)
         
         low_fea = self.low_fea_conv(low_fea)
         low_fea = F.interpolate(low_fea, scale_factor=2, mode='bicubic', align_corners=False)
-        aligned_fea = self.lrelu(self.L2_fea_conv(torch.cat([aligned_fea, low_fea], dim=1)))
+        aligned_fea = self.lrelu(self.fea_conv(torch.cat([aligned_fea, low_fea], dim=1)))
 
         # Cascading 
         offset = torch.cat([aligned_fea, ref_fea], dim=1)
@@ -144,9 +190,9 @@ class VSRUN(nn.Module):
         self.center = nframes // 2 if center is None else center
         self.nframes = nframes
         self.w_TSA = w_TSA
-        ReconstructionBlock1 = functools.partial(mutil.ResidualBlock_noBN, nf=4*nf,
+        ReconstructionBlock1 = functools.partial(mutil.ResidualGroup, nf=4*nf,
                                                  res_blocks=res_blocks//res_groups, reduction=nf)
-        ReconstructionBlock2 = functools.partial(mutil.ResidualBlock_noBN, nf=2*nf,
+        ReconstructionBlock2 = functools.partial(mutil.ResidualGroup, nf=4*nf,
                                                  res_blocks=res_blocks//res_groups, reduction=nf)
         self.head = nn.Conv2d(3, nf, 3, 1, 1, bias=True)
         self.upsample = nn.Upsample(scale_factor=4,
@@ -154,8 +200,8 @@ class VSRUN(nn.Module):
         self.down1 = DownBlock(3, nf, 2*nf)
         self.down2 = DownBlock(2*nf, 2*nf, 4*nf)
         
-        self.fea_L2_conv1 = DownBlock(4*nf, 4*nf, 4*nf)
-        self.fea_L3_conv1 = DownBlock(4*nf, 4*nf, 4*nf)
+        self.pcd_down1 = DownBlock(4*nf, 4*nf, 4*nf)
+        self.pcd_down2 = DownBlock(4*nf, 4*nf, 4*nf)
 
         # align module
         self.pcd_align = PCD_Align_With_Offset(nf=4*nf, groups=groups)
@@ -176,12 +222,12 @@ class VSRUN(nn.Module):
         
         self.up1 = nn.Sequential(
             ForwardConcat(mutil.ResidualBlock_noBN, 4, 4*nf),
-            nn.Conv2d(4*nf, 2*nf, 1, 1, 1, bias=True),
+            nn.Conv2d(16*nf, 8*nf, 1, 1, 0, bias=True),
             nn.PixelShuffle(2)
         )
         self.up2 = nn.Sequential(
-            ForwardConcat(mutil.ResidualBlock_noBN, 4, 2*nf),
-            nn.Conv2d(2*nf, nf, 1, 1, 1, bias=True),
+            ForwardConcat(mutil.ResidualBlock_noBN, 4, 4*nf),
+            nn.Conv2d(16*nf, 4*nf, 1, 1, 0, bias=True),
             nn.PixelShuffle(2)
         )
 
@@ -207,13 +253,15 @@ class VSRUN(nn.Module):
         offset = torch.stack(offset, dim=1)
         return aligned_fea, offset
     
-    def align_dcn(self, align_module, ref_fea, lower_fea, lower_offset):
+    def align_dcn(self, align_module, feature, lower_fea, lower_offset):
         """align the video frames feature using DCN align module"""
-        ref_fea = ref_fea[:, self.center, :, :, :].clone()
+        ref_fea = feature[:, self.center, :, :, :].clone()
         aligned_fea, offset  = [], []
         for i in range(self.nframes):
-            nbr_fea =  ref_fea[:, i, :, :, :].clone()
-            results = align_module(nbr_fea, ref_fea, lower_fea, lower_offset)
+            nbr_fea_i =  feature[:, i, :, :, :].clone()
+            lower_fea_i = lower_fea[:, i, :, :, :].clone()
+            lower_offset_i = lower_offset[:, i, :, :, :].clone()
+            results = align_module(nbr_fea_i, ref_fea, lower_fea_i, lower_offset_i)
             aligned_fea.append(results[0])
             offset.append(results[1])
         aligned_fea = torch.stack(aligned_fea, dim=1)
@@ -222,7 +270,7 @@ class VSRUN(nn.Module):
     
     def fusion(self, fusion_module, aligned_fea, size):
         """fuse the aligned video frames freatures"""
-        B, _, _, H, W = size
+        B, _, H, W = size
         if not self.w_TSA:
             return fusion_module(aligned_fea.view(B, -1, H, W))
         return fusion_module(aligned_fea)
@@ -235,8 +283,10 @@ class VSRUN(nn.Module):
         # down sample
         x_down1 = self.down1(x_head)
         L1_fea = self.down2(x_down1)
-        L2_fea = self.fea_L2_down(L1_fea)
-        L3_fea = self.fea_L2_down(L2_fea)
+        L2_fea = self.pcd_down1(L1_fea)
+        L3_fea = self.pcd_down2(L2_fea)
+
+        # resize tensors' shape
         L1_fea = L1_fea.view(B, N, -1, H, W)
         L2_fea = L2_fea.view(B, N, -1, H // 2, W // 2)
         L3_fea = L3_fea.view(B, N, -1, H // 4, W // 4)
@@ -246,27 +296,27 @@ class VSRUN(nn.Module):
         x_fusion = self.fusion(self.tsa_fusion1, aligned_fea, (B, -1, H, W))
         
         # Reconstruction and upscale 2x
-        x_up1 = self.up1(self.recon_trunk1(x_fusion))
+        x_up1 = self.up1(x_fusion + self.recon_trunk1(x_fusion))
 
         # Frames DCN Align and Fusion 2
-        ref_fea = x_down1.view(B, N, -1, 2 * H, 2 * W)
-        aligned_fea, offset = self.align_dcn(self.dcn_align1, ref_fea, aligned_fea, offset)
+        x_down1 = x_down1.view(B, N, -1, 2 * H, 2 * W)
+        aligned_fea, offset = self.align_dcn(self.dcn_align1, x_down1, aligned_fea, offset)
         x_fusion = self.fusion(self.tsa_fusion2, aligned_fea, (B, -1, 2 * H, 2 * W))
 
         # concat features and upscale (2x size of inputs)
         x_cat_2x = torch.cat((x_fusion, x_up1), -3)
-        x_up2 = self.up2(self.recon_trunk2(x_cat_2x))
+        x_up2 = self.up2(x_cat_2x + self.recon_trunk2(x_cat_2x))
 
         # frames DCN Align and fusion 3
         ref_fea = x_head.view(B, N, -1, 4 * H, 4 * W)
         aligned_fea, offset = self.align_dcn(self.dcn_align2, ref_fea, aligned_fea, offset)
-        x_head_fusion = self.fusion(self.tsa_fusion3, aligned_fea, (B, -1, 4 * H, 4 * W))
+        x_fusion = self.fusion(self.tsa_fusion3, aligned_fea, (B, -1, 4 * H, 4 * W))
 
         # concat x_fusion and x_up2 (4x size of inputs)
-        x_cat_4x = torch.cat((x_head_fusion, x_up2), -3)
+        x_cat_4x = torch.cat((x_fusion, x_up2), -3)
 
         # output
         out_2x = self.tail1(x_cat_2x)
         out_4x = self.tail2(x_cat_4x)
 
-        return out_2x, out_4x
+        return out_4x # out_2x, out_4x
