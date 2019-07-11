@@ -6,13 +6,13 @@ import torch.nn as nn
 from torch.nn.parallel import DataParallel, DistributedDataParallel
 import models.networks as networks
 import models.lr_scheduler as lr_scheduler
-from .VideoSR_base_model import VideoSR_base_model
+from .VideoSR_base_model import VideoSRBaseModel
 from models.modules.loss import CharbonnierLoss
 
 logger = logging.getLogger('base')
 
 
-class VSRBaseModel(VideoSR_base_model):
+class VSRBaseModel(VideoSRBaseModel):
     def __init__(self, opt):
         super(VSRBaseModel, self).__init__(opt)
 
@@ -29,7 +29,7 @@ class VSRBaseModel(VideoSR_base_model):
 
         self.optimizer_G.zero_grad()
         self.fake_H = self.netG(self.var_L)
-        if isinstance(self.fake_H, list):
+        if isinstance(self.fake_H, tuple):
             l_pix = self.l_pix_w * self.cri_pix(self.fake_H[0], self.real_BIX2)
             l_pix += self.l_pix_w * self.cri_pix(self.fake_H[1], self.real_H)
         else:
@@ -49,6 +49,6 @@ class VSRBaseModel(VideoSR_base_model):
         if need_GT:
             out_dict['BIX2'] = self.real_BIX2.detach()[0].float().cpu()
         return out_dict
-        
+
     def save(self, iter_label):
         self.save_network(self.netG, 'G', iter_label)

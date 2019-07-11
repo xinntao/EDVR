@@ -120,28 +120,28 @@ class YoukuTrain(data.Dataset):
 
         #### get the GT image (as the center frame)
         resolutions_GT = [int(s) for s in self.resolutions_GT[name_a].split('_')]
+        resolutions_BIX2 = [int(s) for s in self.resolutions_BIX2[name_a].split('_')]
         if self.data_type == 'lmdb':
             img_GT = util.read_img(self.GT_env, key, resolutions_GT)
+            img_BIX2 = util.read_img(self.BIX2_env, key, resolutions_BIX2) 
         else:
             # img_GT filename is Youku_00059_h_GT100.bmp
             img_GT = util.read_img(None, osp.join(self.GT_root, 'Youku_{}_h_GT{}.bmp'.format(name_a, name_b))) 
+            # the names of BIX2 imgs are the same as GT.
+            img_BIX2 = util.read_img(None, osp.join(self.BIX2_root, 'Youku_{}_h_GT{}.bmp'.format(name_a, name_b)))  
 
         #### get LQ images
-        BIX2_size_tuple = [int(s) for s in self.resolutions_BIX2[name_a].split('_')]
+        
         resolutions_LQ = [int(s) for s in self.resolutions_LQ[name_a].split('_')]
         LQ_size_tuple = resolutions_LQ if self.LR_input else resolutions_GT
-        img_BIX2_l, img_LQ_l = [], []
+        img_LQ_l = []
         for v in neighbor_list:
             # img_LQ filename is Youku_00059_l100.bmp
-            img_BIX2_path = osp.join(self.BIX2_root, 'Youku_{}_h_GT{}.bmp'.format(name_a, v)) # the names of BIX2 imgs are the same as GT.
             img_LQ_path = osp.join(self.LQ_root, 'Youku_{}_l{:03d}.bmp'.format(name_a, v))
             if self.data_type == 'lmdb':
-                img_BIX2 = util.read_img(self.BIX2_env, '{}_{:03d}'.format(name_a, v), BIX2_size_tuple) 
                 img_LQ = util.read_img(self.LQ_env, '{}_{:03d}'.format(name_a, v), LQ_size_tuple) 
             else:
-                img_BIX2 = util.read_img(None, img_BIX2_path) 
                 img_LQ = util.read_img(None, img_LQ_path)
-            img_BIX2_l.append(img_BIX2)
             img_LQ_l.append(img_LQ)            
 
         if self.opt['phase'] == 'train':
@@ -154,7 +154,7 @@ class YoukuTrain(data.Dataset):
             rnd_w = random.randint(0, max(0, W - LQ_size))
             img_LQ_l = [v[rnd_h:rnd_h + LQ_size, rnd_w:rnd_w + LQ_size, :] for v in img_LQ_l]
             rnd_h_BIX2, rnd_w_BIX2 = int(rnd_h * 2), int(rnd_w * 2) # for 2times upscale
-            img_BIX2 = [v[rnd_h_BIX2:rnd_h_BIX2 + BIX2_size, rnd_w_BIX2:rnd_w_BIX2 + BIX2_size, :] for v in img_BIX2_l]
+            img_BIX2 = img_BIX2[rnd_h_BIX2:rnd_h_BIX2 + BIX2_size, rnd_w_BIX2:rnd_w_BIX2 + BIX2_size, :]
             rnd_h_HR, rnd_w_HR = int(rnd_h * scale), int(rnd_w * scale)
             img_GT = img_GT[rnd_h_HR:rnd_h_HR + GT_size, rnd_w_HR:rnd_w_HR + GT_size, :]
             # else:
@@ -164,23 +164,21 @@ class YoukuTrain(data.Dataset):
             #     img_GT = img_GT[rnd_h:rnd_h + GT_size, rnd_w:rnd_w + GT_size, :]
 
             # augmentation - flip, rotate
-            img_LQ_l += img_BIX2
+            img_LQ_l.append(img_BIX2)
             img_LQ_l.append(img_GT)
             rlt = util.augment(img_LQ_l, self.opt['use_flip'], self.opt['use_rot'])
-            img_LQ_l = rlt[0:-1-len(img_BIX2)]
-            img_BIX2 = rlt[-1-len(img_BIX2):-1]
+            img_LQ_l = rlt[0:-2]
+            img_BIX2 = rlt[-2]
             img_GT = rlt[-1]
 
         # stack LQ images to NHWC, N is the frame number
         img_LQs = np.stack(img_LQ_l, axis=0)
-        img_BIX2s = np.stack(img_BIX2, axis=0)
         # BGR to RGB, HWC to CHW, numpy to tensor
         img_GT = img_GT[:, :, [2, 1, 0]]
-        img_BIX2s = img_BIX2s[:, :, :, [2, 1, 0]]
+        img_BIX2 = img_BIX2[:, :, [2, 1, 0]]
         img_LQs = img_LQs[:, :, :, [2, 1, 0]]
         img_GT = torch.from_numpy(np.ascontiguousarray(np.transpose(img_GT, (2, 0, 1)))).float()
-        img_BIX2s = torch.from_numpy(np.ascontiguousarray(np.transpose(img_BIX2s,
-                                                                     (0, 3, 1, 2)))).float()
+        img_BIX2s = torch.from_numpy(np.ascontiguousarray(np.transpose(img_BIX2, (2, 0, 1)))).float()
         img_LQs = torch.from_numpy(np.ascontiguousarray(np.transpose(img_LQs,
                                                                      (0, 3, 1, 2)))).float()
         return {'LQs': img_LQs, 'BIX2s': img_BIX2s,'GT': img_GT, 'key': key}
