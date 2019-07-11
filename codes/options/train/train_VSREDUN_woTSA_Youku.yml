@@ -1,7 +1,7 @@
 #### general settings
 name: 007_VSRUNwoTSA_scratch_lr4e-4_600k_Youku_LrCAR4S
 use_tb_logger: true
-model: VideoSR_base
+model: VSR_base
 distortion: sr
 scale: 4
 gpu_ids: [0] # [0,1,2,3,4,5,6,7]
@@ -9,12 +9,13 @@ gpu_ids: [0] # [0,1,2,3,4,5,6,7]
 #### datasets
 datasets:
   train:
-    name: Youku
-    mode: Youku
+    name: YoukuTrain
+    mode: YoukuTrain
     interval_list: [1]
     random_reverse: false
     border_mode: false
     dataroot_GT: /home/datasets/sr/youku_data/round1/train/HR_frames.lmdb
+    dataroot_BIX2: /home/datasets/sr/youku_data/round1/train/HR_frames.lmdb
     dataroot_LQ: /home/datasets/sr/youku_data/round1/train/LR_frames.lmdb
     cache_keys: Youku_train_keys.pkl
 

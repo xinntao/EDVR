@@ -29,6 +29,10 @@ def parse(opt_path, is_train=True):
             dataset['dataroot_GT'] = os.path.expanduser(dataset['dataroot_GT'])
             if dataset['dataroot_GT'].endswith('lmdb'):
                 is_lmdb = True
+        if dataset.get('dataroot_BIX2', None) is not None:
+            dataset['dataroot_BIX2'] = os.path.expanduser(dataset['dataroot_BIX2'])
+            if dataset['dataroot_BIX2'].endswith('lmdb'):
+                is_lmdb = True
         if dataset.get('dataroot_LQ', None) is not None:
             dataset['dataroot_LQ'] = os.path.expanduser(dataset['dataroot_LQ'])
             if dataset['dataroot_LQ'].endswith('lmdb'):

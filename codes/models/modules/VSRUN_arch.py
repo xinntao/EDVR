@@ -319,4 +319,4 @@ class VSRUN(nn.Module):
         out_2x = self.tail1(x_cat_2x)
         out_4x = self.tail2(x_cat_4x)
 
-        return out_4x # out_2x, out_4x
+        return out_2x, out_4x
