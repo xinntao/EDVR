@@ -16,12 +16,12 @@ class EDVRModel(VideoBaseModel):
     def __init__(self, opt):
         super(EDVRModel, self).__init__(opt)
         if self.is_train:
-            self.train_tsa_iter = opt['train']['tsa_iter']
+            self.train_tsa_iter = opt['train'].get('tsa_iter')
 
     def setup_optimizers(self):
         train_opt = self.opt['train']
         dcn_lr_mul = train_opt.get('dcn_lr_mul', 1)
-        logger.info(f'multiple the learning rate for dcn with {dcn_lr_mul}.')
+        logger.info(f'Multiple the learning rate for dcn with {dcn_lr_mul}.')
         if dcn_lr_mul == 1:
             optim_params = self.net_g.parameters()
         else:  # separate dcn params and normal params for differnet lr
@@ -61,11 +61,11 @@ class EDVRModel(VideoBaseModel):
                     if 'fusion' not in name:
                         param.requires_grad = False
             elif current_iter == self.train_tsa_iter:
-                logger.warn('Train all the parameters.')
+                logger.warning('Train all the parameters.')
                 for param in self.net_g.parameters():
                     param.requires_grad = True
                 if isinstance(self.net_g, DistributedDataParallel):
-                    logger.warn('Set net_g.find_unused_parameters = False.')
+                    logger.warning('Set net_g.find_unused_parameters = False.')
                     self.net_g.find_unused_parameters = False
 
         super(VideoBaseModel, self).optimize_parameters(current_iter)
