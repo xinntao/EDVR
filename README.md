@@ -1,6 +1,7 @@
-### EDVR has been merged into [BasicSR](https://github.com/xinntao/BasicSR). This GitHub repo is a mirror of [BasicSR](https://github.com/xinntao/BasicSR).
-### :rocket: Recommend to use [BasicSR](https://github.com/xinntao/BasicSR), and open issues, pull requests, etc in [BasicSR](https://github.com/xinntao/BasicSR).
+#### EDVR has been merged into [BasicSR](https://github.com/xinntao/BasicSR). This GitHub repo is a mirror of [BasicSR](https://github.com/xinntao/BasicSR). Recommend to use [BasicSR](https://github.com/xinntao/BasicSR), and open issues, pull requests, etc in [BasicSR](https://github.com/xinntao/BasicSR).
 Note that this version is not compatible with previous versions. If you want to use previous ones, please refer to the `old_version` branch.
+
+---
 
 # :rocket: [BasicSR](https://github.com/xinntao/BasicSR)
 
