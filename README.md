@@ -1,8 +1,8 @@
-#### EDVR has been merged into [BasicSR](https://github.com/xinntao/BasicSR). This GitHub repo is a mirror of [BasicSR](https://github.com/xinntao/BasicSR).<br>
-#### :rocket: Recommend to use [BasicSR](https://github.com/xinntao/BasicSR), and open issues, pull requests, etc in [BasicSR](https://github.com/xinntao/BasicSR).<br>
-Note that: this newest version is not compatible with previous versions. If you want to use previous ones, please refer to the `old_version` branch.
+### EDVR has been merged into [BasicSR](https://github.com/xinntao/BasicSR). This GitHub repo is a mirror of [BasicSR](https://github.com/xinntao/BasicSR).
+### :rocket: Recommend to use [BasicSR](https://github.com/xinntao/BasicSR), and open issues, pull requests, etc in [BasicSR](https://github.com/xinntao/BasicSR).
+Note that this version is not compatible with previous versions. If you want to use previous ones, please refer to the `old_version` branch.
 
-# rocket: [BasicSR](https://github.com/xinntao/BasicSR)
+# :rocket: [BasicSR](https://github.com/xinntao/BasicSR)
 
 [GitHub](https://github.com/xinntao/BasicSR) | [Gitee码云](https://gitee.com/xinntao/BasicSR) <br>
 [English](README.md) | [简体中文](README_CN.md)

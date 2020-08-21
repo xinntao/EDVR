@@ -1,5 +1,5 @@
-#### EDVR 已经 merge 到 [BasicSR](https://github.com/xinntao/BasicSR) 了. 这个 GitHub repo 只是 [BasicSR](https://github.com/xinntao/BasicSR) 的一个镜像.<br>
-#### :rocket: 推荐使用 [BasicSR](https://github.com/xinntao/BasicSR), 以及在 [BasicSR](https://github.com/xinntao/BasicSR) 的 GitHub repo 中提 issues, pull requests.<br>
+### EDVR 已经 merge 到 [BasicSR](https://github.com/xinntao/BasicSR) 了. 这个 GitHub repo 只是 [BasicSR](https://github.com/xinntao/BasicSR) 的一个镜像.
+### :rocket: 推荐使用 [BasicSR](https://github.com/xinntao/BasicSR), 以及在 [BasicSR](https://github.com/xinntao/BasicSR) 的 GitHub repo 中提 issues, pull requests.
 注意: 目前最新的版本不兼容之前的版本, 如果要使用之前的版本, 参见 `old_version` 分支.
 
 ---
