@@ -19,7 +19,7 @@ BasicSR 是一个基于 PyTorch 的**开源**图像视频超分辨率 (Super-Res
 - NVIDIA GPU + [CUDA](https://developer.nvidia.com/cuda-downloads)
 
 在BasicSR的**根目录**下运行以下命令:<br>
-确保 GCC 版本: gcc >= 5.
+(确保 GCC 版本: gcc >= 5)
 
 ```bash
 pip install -r requirements.txt
@@ -27,6 +27,13 @@ python setup.py develop
 ```
 
 注意: BasicSR 仅在 Ubuntu 下进行测试，或许不支持Windows. 可以在Windows下尝试[支持CUDA的Windows WSL](https://docs.microsoft.com/en-us/windows/win32/direct3d12/gpu-cuda-in-wsl) :-) (目前只有Fast ring的预览版系统可以安装).
+
+## HOWTOs
+
+我们提供了简单的流程来快速上手 训练/测试/推理 模型. 这些命令并不能涵盖所有用法, 更多的细节参见下面的部分.
+
+- [如何训练 StyleGAN2](docs/HOWTOs_CN.md#如何训练-StyleGAN2)
+- [如何测试 StyleGAN2](docs/HOWTOs_CN.md#如何测试-StyleGAN2)
 
 ## TODO 清单
 
