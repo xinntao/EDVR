@@ -179,12 +179,15 @@ class EqualLinear(nn.Module):
             self.register_parameter('bias', None)
 
     def forward(self, x):
+        if self.bias is None:
+            bias = None
+        else:
+            bias = self.bias * self.lr_mul
         if self.activation == 'fused_lrelu':
             out = F.linear(x, self.weight * self.scale)
-            out = fused_leaky_relu(out, self.bias * self.lr_mul)
+            out = fused_leaky_relu(out, bias)
         else:
-            out = F.linear(
-                x, self.weight * self.scale, bias=self.bias * self.lr_mul)
+            out = F.linear(x, self.weight * self.scale, bias=bias)
         return out
 
     def __repr__(self):
@@ -584,7 +587,8 @@ class StyleGAN2Generator(nn.Module):
                 False. Default: True.
             truncation (float): TODO. Default: 1.
             truncation_latent (Tensor | None): TODO. Default: None.
-            inject_index (int | None): TODO. Default: None.
+            inject_index (int | None): The injection index for mixing noise.
+                Default: None.
             return_latents (bool): Whether to return style latents.
                 Default: False.
         """
@@ -608,15 +612,15 @@ class StyleGAN2Generator(nn.Module):
                                         (style - truncation_latent))
             styles = style_truncation
         # get style latent with injection
-        if len(styles) < 2:
+        if len(styles) == 1:
             inject_index = self.num_latent
 
             if styles[0].ndim < 3:
                 # repeat latent code for all the layers
                 latent = styles[0].unsqueeze(1).repeat(1, inject_index, 1)
-            else:
+            else:  # used for encoder with different latent code for each layer
                 latent = styles[0]
-        else:
+        elif len(styles) == 2:  # mixing noises
             if inject_index is None:
                 inject_index = random.randint(1, self.num_latent - 1)
             latent1 = styles[0].unsqueeze(1).repeat(1, inject_index, 1)
@@ -674,6 +678,7 @@ class EqualConv2d(nn.Module):
             Default: 0.
         bias (bool): If ``True``, adds a learnable bias to the output.
             Default: ``True``.
+        bias_init_val (float): Bias initialized value. Default: 0.
     """
 
     def __init__(self,
@@ -682,7 +687,8 @@ class EqualConv2d(nn.Module):
                  kernel_size,
                  stride=1,
                  padding=0,
-                 bias=True):
+                 bias=True,
+                 bias_init_val=0):
         super(EqualConv2d, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -694,7 +700,8 @@ class EqualConv2d(nn.Module):
         self.weight = nn.Parameter(
             torch.randn(out_channels, in_channels, kernel_size, kernel_size))
         if bias:
-            self.bias = nn.Parameter(torch.zeros(out_channels))
+            self.bias = nn.Parameter(
+                torch.zeros(out_channels).fill_(bias_init_val))
         else:
             self.register_parameter('bias', None)
 
