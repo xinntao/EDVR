@@ -1,6 +1,6 @@
 import argparse
 import math
-import mmcv
+import os
 import torch
 from torchvision import utils
 
@@ -30,7 +30,7 @@ def generate(args, g_ema, device, mean_latent, randomize_noise):
 
 
 if __name__ == '__main__':
-    device = 'cuda'
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     parser = argparse.ArgumentParser()
 
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         '--ckpt',
         type=str,
         default=  # noqa: E251
-        'experiments/pretrained_models/stylegan2_ffhq_config_f_1024_official-b09c3668.pth'  # noqa: E501
+        'experiments/pretrained_models/StyleGAN/stylegan2_ffhq_config_f_1024_official-b09c3668.pth'  # noqa: E501
     )
     parser.add_argument('--channel_multiplier', type=int, default=2)
     parser.add_argument('--randomize_noise', type=bool, default=True)
@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
     args.latent = 512
     args.n_mlp = 8
-    mmcv.mkdir_or_exist('samples')
+    os.makedirs('samples', exist_ok=True)
     set_random_seed(2020)
 
     g_ema = StyleGAN2Generator(

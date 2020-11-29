@@ -1,11 +1,9 @@
 import cv2
 import lmdb
-import mmcv
 import sys
 from multiprocessing import Pool
 from os import path as osp
-
-from .util import ProgressBar
+from tqdm import tqdm
 
 
 def make_lmdb_from_imgs(data_path,
@@ -76,12 +74,13 @@ def make_lmdb_from_imgs(data_path,
         dataset = {}  # use dict to keep the order for multiprocessing
         shapes = {}
         print(f'Read images with multiprocessing, #thread: {n_thread} ...')
-        pbar = ProgressBar(len(img_path_list))
+        pbar = tqdm(total=len(img_path_list), unit='image')
 
         def callback(arg):
             """get the image data and update pbar."""
             key, dataset[key], shapes[key] = arg
-            pbar.update('Reading {}'.format(key))
+            pbar.update(1)
+            pbar.set_description(f'Read {key}')
 
         pool = Pool(n_thread)
         for path, key in zip(img_path_list, keys):
@@ -91,13 +90,14 @@ def make_lmdb_from_imgs(data_path,
                 callback=callback)
         pool.close()
         pool.join()
+        pbar.close()
         print(f'Finish reading {len(img_path_list)} images.')
 
     # create lmdb environment
     if map_size is None:
         # obtain data size for one image
-        img = mmcv.imread(
-            osp.join(data_path, img_path_list[0]), flag='unchanged')
+        img = cv2.imread(
+            osp.join(data_path, img_path_list[0]), cv2.IMREAD_UNCHANGED)
         _, img_byte = cv2.imencode(
             '.png', img, [cv2.IMWRITE_PNG_COMPRESSION, compress_level])
         data_size_per_img = img_byte.nbytes
@@ -108,11 +108,12 @@ def make_lmdb_from_imgs(data_path,
     env = lmdb.open(lmdb_path, map_size=map_size)
 
     # write data to lmdb
-    pbar = ProgressBar(len(img_path_list))
+    pbar = tqdm(total=len(img_path_list), unit='chunk')
     txn = env.begin(write=True)
     txt_file = open(osp.join(lmdb_path, 'meta_info.txt'), 'w')
     for idx, (path, key) in enumerate(zip(img_path_list, keys)):
-        pbar.update(f'Write {key}')
+        pbar.update(1)
+        pbar.set_description(f'Write {key}')
         key_byte = key.encode('ascii')
         if multiprocessing_read:
             img_byte = dataset[key]
@@ -128,6 +129,7 @@ def make_lmdb_from_imgs(data_path,
         if idx % batch == 0:
             txn.commit()
             txn = env.begin(write=True)
+    pbar.close()
     txn.commit()
     env.close()
     txt_file.close()
@@ -148,7 +150,7 @@ def read_img_worker(path, key, compress_level):
         tuple[int]: Image shape.
     """
 
-    img = mmcv.imread(path, flag='unchanged')
+    img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     if img.ndim == 2:
         h, w = img.shape
         c = 1

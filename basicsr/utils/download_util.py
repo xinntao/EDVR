@@ -1,7 +1,8 @@
 import math
 import requests
+from tqdm import tqdm
 
-from basicsr.utils import ProgressBar
+from .misc import sizeof_fmt
 
 
 def download_file_from_google_drive(file_id, save_path):
@@ -49,7 +50,8 @@ def save_response_content(response,
                           file_size=None,
                           chunk_size=32768):
     if file_size is not None:
-        pbar = ProgressBar(math.ceil(file_size / chunk_size))
+        pbar = tqdm(total=math.ceil(file_size / chunk_size), unit='chunk')
+
         readable_file_size = sizeof_fmt(file_size)
     else:
         pbar = None
@@ -59,24 +61,10 @@ def save_response_content(response,
         for chunk in response.iter_content(chunk_size):
             downloaded_size += chunk_size
             if pbar is not None:
-                pbar.update(f'Downloading {sizeof_fmt(downloaded_size)} '
-                            f'/ {readable_file_size}')
+                pbar.update(1)
+                pbar.set_description(f'Download {sizeof_fmt(downloaded_size)} '
+                                     f'/ {readable_file_size}')
             if chunk:  # filter out keep-alive new chunks
                 f.write(chunk)
-
-
-def sizeof_fmt(size, suffix='B'):
-    """Get human readable file size.
-
-    Args:
-        size (int): File size.
-        suffix (str): Suffix. Default: 'B'.
-
-    Return:
-        str: Formated file siz.
-    """
-    for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
-        if abs(size) < 1024.0:
-            return f'{size:3.1f} {unit}{suffix}'
-        size /= 1024.0
-    return f'{size:3.1f} Y{suffix}'
+        if pbar is not None:
+            pbar.close()

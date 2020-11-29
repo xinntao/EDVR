@@ -60,8 +60,8 @@ network_d:
 
 # path
 path:
-  pretrain_model_g: experiments/001_MSRResNet_x4_f64b16_DIV2K_1000k_B16G1_wandb/models/net_g_1000000.pth
-  strict_load: true
+  pretrain_network_g: experiments/001_MSRResNet_x4_f64b16_DIV2K_1000k_B16G1_wandb/models/net_g_1000000.pth
+  strict_load_g: true
   resume_state: ~
 
 # training settings
@@ -96,9 +96,9 @@ train:
       'conv5_4': 1  # before relu
     vgg_type: vgg19
     use_input_norm: true
+    scale: false
     perceptual_weight: 1.0
     style_weight: 0
-    norm_img: false
     criterion: l1
   gan_opt:
     type: GANLoss

@@ -1,19 +1,19 @@
 import argparse
-import mmcv
+import os
 from os import path as osp
 
-from basicsr.utils.download import download_file_from_google_drive
+from basicsr.utils.download_util import download_file_from_google_drive
 
 
 def download_pretrained_models(method, file_ids):
     save_path_root = f'./experiments/pretrained_models/{method}'
-    mmcv.mkdir_or_exist(save_path_root)
+    os.makedirs(save_path_root, exist_ok=True)
 
     for file_name, file_id in file_ids.items():
         save_path = osp.abspath(osp.join(save_path_root, file_name))
         if osp.exists(save_path):
             user_response = input(
-                f'{file_name} already exist. Do you want to cover it? Y/N')
+                f'{file_name} already exist. Do you want to cover it? Y/N\n')
             if user_response.lower() == 'y':
                 print(f'Covering {file_name} to {save_path}')
                 download_file_from_google_drive(file_id, save_path)
@@ -112,9 +112,7 @@ if __name__ == '__main__':
             'DFDNet_dict_512-f79685f0.pth':
             '1iH00oMsoN_1OJaEQw3zP7_wqiAYMnY79',
             'DFDNet_official-d1fa5650.pth':
-            '1u6Sgcp8gVoy4uVTrOJKD3y9RuqH2JBAe',
-            'FFHQ_5_landmarks_template_1024-90a00515.npy':
-            '1IQdQcq9QnpW6YzRwDaNbpV-rJ1Cq7RUq'
+            '1u6Sgcp8gVoy4uVTrOJKD3y9RuqH2JBAe'
         },
         'dlib': {
             'mmod_human_face_detector-4cb19393.dat':

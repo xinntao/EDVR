@@ -4,6 +4,7 @@ from setuptools import find_packages, setup
 
 import os
 import subprocess
+import sys
 import time
 import torch
 from torch.utils.cpp_extension import (BuildExtension, CppExtension,
@@ -85,8 +86,9 @@ def get_version():
     return locals()['__version__']
 
 
-def make_cuda_ext(name, module, sources, sources_cuda=[]):
-
+def make_cuda_ext(name, module, sources, sources_cuda=None):
+    if sources_cuda is None:
+        sources_cuda = []
     define_macros = []
     extra_compile_args = {'cxx': []}
 
@@ -118,6 +120,31 @@ def get_requirements(filename='requirements.txt'):
 
 
 if __name__ == '__main__':
+    if '--no_cuda_ext' in sys.argv:
+        ext_modules = []
+        sys.argv.remove('--no_cuda_ext')
+    else:
+        ext_modules = [
+            make_cuda_ext(
+                name='deform_conv_ext',
+                module='basicsr.models.ops.dcn',
+                sources=['src/deform_conv_ext.cpp'],
+                sources_cuda=[
+                    'src/deform_conv_cuda.cpp',
+                    'src/deform_conv_cuda_kernel.cu'
+                ]),
+            make_cuda_ext(
+                name='fused_act_ext',
+                module='basicsr.models.ops.fused_act',
+                sources=['src/fused_bias_act.cpp'],
+                sources_cuda=['src/fused_bias_act_kernel.cu']),
+            make_cuda_ext(
+                name='upfirdn2d_ext',
+                module='basicsr.models.ops.upfirdn2d',
+                sources=['src/upfirdn2d.cpp'],
+                sources_cuda=['src/upfirdn2d_kernel.cu']),
+        ]
+
     write_version_py()
     setup(
         name='basicsr',
@@ -142,25 +169,6 @@ if __name__ == '__main__':
         license='Apache License 2.0',
         setup_requires=['cython', 'numpy'],
         install_requires=get_requirements(),
-        ext_modules=[
-            make_cuda_ext(
-                name='deform_conv_ext',
-                module='basicsr.models.ops.dcn',
-                sources=['src/deform_conv_ext.cpp'],
-                sources_cuda=[
-                    'src/deform_conv_cuda.cpp',
-                    'src/deform_conv_cuda_kernel.cu'
-                ]),
-            make_cuda_ext(
-                name='fused_act_ext',
-                module='basicsr.models.ops.fused_act',
-                sources=['src/fused_bias_act.cpp'],
-                sources_cuda=['src/fused_bias_act_kernel.cu']),
-            make_cuda_ext(
-                name='upfirdn2d_ext',
-                module='basicsr.models.ops.upfirdn2d',
-                sources=['src/upfirdn2d.cpp'],
-                sources_cuda=['src/upfirdn2d_kernel.cu']),
-        ],
+        ext_modules=ext_modules,
         cmdclass={'build_ext': BuildExtension},
         zip_safe=False)

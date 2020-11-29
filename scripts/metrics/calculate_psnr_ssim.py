@@ -1,8 +1,10 @@
-import mmcv
+import cv2
 import numpy as np
 from os import path as osp
 
 from basicsr.metrics import calculate_psnr, calculate_ssim
+from basicsr.utils import scandir
+from basicsr.utils.matlab_functions import bgr2ycbcr
 
 
 def main():
@@ -23,11 +25,12 @@ def main():
     crop_border = 4
     suffix = '_expname'
     test_y_channel = False
+    correct_mean_var = False
     # -------------------------------------------------------------------------
 
     psnr_all = []
     ssim_all = []
-    img_list = sorted(mmcv.scandir(folder_gt, recursive=True))
+    img_list = sorted(scandir(folder_gt, recursive=True, full_path=True))
 
     if test_y_channel:
         print('Testing Y channel.')
@@ -36,16 +39,35 @@ def main():
 
     for i, img_path in enumerate(img_list):
         basename, ext = osp.splitext(osp.basename(img_path))
-        img_gt = mmcv.imread(
-            osp.join(folder_gt, img_path), flag='unchanged').astype(
-                np.float32) / 255.
-        img_restored = mmcv.imread(
+        img_gt = cv2.imread(img_path, cv2.IMREAD_UNCHANGED).astype(
+            np.float32) / 255.
+        img_restored = cv2.imread(
             osp.join(folder_restored, basename + suffix + ext),
-            flag='unchanged').astype(np.float32) / 255.
+            cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.
+
+        if correct_mean_var:
+            mean_l = []
+            std_l = []
+            for j in range(3):
+                mean_l.append(np.mean(img_gt[:, :, j]))
+                std_l.append(np.std(img_gt[:, :, j]))
+            for j in range(3):
+                # correct twice
+                mean = np.mean(img_restored[:, :, j])
+                img_restored[:, :,
+                             j] = img_restored[:, :, j] - mean + mean_l[j]
+                std = np.std(img_restored[:, :, j])
+                img_restored[:, :, j] = img_restored[:, :, j] / std * std_l[j]
+
+                mean = np.mean(img_restored[:, :, j])
+                img_restored[:, :,
+                             j] = img_restored[:, :, j] - mean + mean_l[j]
+                std = np.std(img_restored[:, :, j])
+                img_restored[:, :, j] = img_restored[:, :, j] / std * std_l[j]
 
         if test_y_channel and img_gt.ndim == 3 and img_gt.shape[2] == 3:
-            img_gt = mmcv.bgr2ycbcr(img_gt, y_only=True)
-            img_restored = mmcv.bgr2ycbcr(img_restored, y_only=True)
+            img_gt = bgr2ycbcr(img_gt, y_only=True)
+            img_restored = bgr2ycbcr(img_restored, y_only=True)
 
         # calculate PSNR and SSIM
         psnr = calculate_psnr(
@@ -62,6 +84,8 @@ def main():
               f'\tSSIM: {ssim:.6f}')
         psnr_all.append(psnr)
         ssim_all.append(ssim)
+    print(folder_gt)
+    print(folder_restored)
     print(f'Average: PSNR: {sum(psnr_all) / len(psnr_all):.6f} dB, '
           f'SSIM: {sum(ssim_all) / len(ssim_all):.6f}')
 

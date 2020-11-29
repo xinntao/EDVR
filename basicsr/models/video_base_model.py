@@ -1,14 +1,14 @@
 import importlib
-import mmcv
 import torch
 from collections import Counter
 from copy import deepcopy
-from mmcv.runner import get_dist_info
 from os import path as osp
 from torch import distributed as dist
+from tqdm import tqdm
 
 from basicsr.models.sr_model import SRModel
-from basicsr.utils import ProgressBar, get_root_logger, tensor2img
+from basicsr.utils import get_root_logger, imwrite, tensor2img
+from basicsr.utils.dist_util import get_dist_info
 
 metric_module = importlib.import_module('basicsr.metrics')
 
@@ -34,13 +34,13 @@ class VideoBaseModel(SRModel):
                     len(self.opt['val']['metrics']),
                     dtype=torch.float32,
                     device='cuda')
-
         rank, world_size = get_dist_info()
-        for _, tensor in self.metric_results.items():
-            tensor.zero_()
+        if with_metrics:
+            for _, tensor in self.metric_results.items():
+                tensor.zero_()
         # record all frames (border and center frames)
         if rank == 0:
-            pbar = ProgressBar(len(dataset))
+            pbar = tqdm(total=len(dataset), unit='frame')
         for idx in range(rank, len(dataset), world_size):
             val_data = dataset[idx]
             val_data['lq'].unsqueeze_(0)
@@ -83,7 +83,7 @@ class VideoBaseModel(SRModel):
                         save_img_path = osp.join(
                             self.opt['path']['visualization'], dataset_name,
                             folder, f'{img_name}_{self.opt["name"]}.png')
-                mmcv.imwrite(result_img, save_img_path)
+                imwrite(result_img, save_img_path)
 
             if with_metrics:
                 # calculate metrics
@@ -98,8 +98,12 @@ class VideoBaseModel(SRModel):
             # progress bar
             if rank == 0:
                 for _ in range(world_size):
-                    pbar.update(f'Test {folder} - '
-                                f'{int(frame_idx) + world_size}/{max_idx}')
+                    pbar.update(1)
+                    pbar.set_description(
+                        f'Test {folder}:'
+                        f'{int(frame_idx) + world_size}/{max_idx}')
+        if rank == 0:
+            pbar.close()
 
         if with_metrics:
             if self.opt['dist']:

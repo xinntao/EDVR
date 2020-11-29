@@ -1,6 +1,5 @@
-import mmcv
+import cv2
 import random
-import torch
 
 
 def mod_crop(img, scale):
@@ -85,7 +84,7 @@ def paired_random_crop(img_gts, img_lqs, gt_patch_size, scale, gt_path):
     return img_gts, img_lqs
 
 
-def augment(imgs, hflip=True, rotation=True, flows=None):
+def augment(imgs, hflip=True, rotation=True, flows=None, return_status=False):
     """Augment: horizontal flips OR rotate (0, 90, 180, 270 degrees).
 
     We use vertical flip and transpose for rotation implementation.
@@ -99,6 +98,8 @@ def augment(imgs, hflip=True, rotation=True, flows=None):
         flows (list[ndarray]: Flows to be augmented. If the input is an
             ndarray, it will be transformed to a list.
             Dimension is (h, w, 2). Default: None.
+        return_status (bool): Return the status of flip and rotation.
+            Default: False.
 
     Returns:
         list[ndarray] | ndarray: Augmented images and flows. If returned
@@ -110,20 +111,20 @@ def augment(imgs, hflip=True, rotation=True, flows=None):
     rot90 = rotation and random.random() < 0.5
 
     def _augment(img):
-        if hflip:
-            mmcv.imflip_(img, 'horizontal')
-        if vflip:
-            mmcv.imflip_(img, 'vertical')
+        if hflip:  # horizontal
+            cv2.flip(img, 1, img)
+        if vflip:  # vertical
+            cv2.flip(img, 0, img)
         if rot90:
             img = img.transpose(1, 0, 2)
         return img
 
     def _augment_flow(flow):
-        if hflip:
-            mmcv.imflip_(flow, 'horizontal')
+        if hflip:  # horizontal
+            cv2.flip(flow, 1, flow)
             flow[:, :, 0] *= -1
-        if vflip:
-            mmcv.imflip_(flow, 'vertical')
+        if vflip:  # vertical
+            cv2.flip(flow, 0, flow)
             flow[:, :, 1] *= -1
         if rot90:
             flow = flow.transpose(1, 0, 2)
@@ -144,31 +145,28 @@ def augment(imgs, hflip=True, rotation=True, flows=None):
             flows = flows[0]
         return imgs, flows
     else:
-        return imgs
+        if return_status:
+            return imgs, (hflip, vflip, rot90)
+        else:
+            return imgs
 
 
-def totensor(imgs, bgr2rgb=True, float32=True):
-    """Numpy array to tensor.
+def img_rotate(img, angle, center=None, scale=1.0):
+    """Rotate image.
 
     Args:
-        imgs (list[ndarray] | ndarray): Input images.
-        bgr2rgb (bool): Whether to change bgr to rgb.
-        float32 (bool): Whether to change to float32.
-
-    Returns:
-        list[tensor] | tensor: Tensor images. If returned results only have
-            one element, just return tensor.
+        img (ndarray): Image to be rotated.
+        angle (float): Rotation angle in degrees. Positive values mean
+            counter-clockwise rotation.
+        center (tuple[int]): Rotation center. If the center is None,
+            initialize it as the center of the image. Default: None.
+        scale (float): Isotropic scale factor. Default: 1.0.
     """
+    (h, w) = img.shape[:2]
 
-    def _totensor(img, bgr2rgb, float32):
-        if img.shape[2] == 3 and bgr2rgb:
-            img = mmcv.bgr2rgb(img)
-        img = torch.from_numpy(img.transpose(2, 0, 1))
-        if float32:
-            img = img.float()
-        return img
+    if center is None:
+        center = (w // 2, h // 2)
 
-    if isinstance(imgs, list):
-        return [_totensor(img, bgr2rgb, float32) for img in imgs]
-    else:
-        return _totensor(imgs, bgr2rgb, float32)
+    matrix = cv2.getRotationMatrix2D(center, angle, scale)
+    rotated_img = cv2.warpAffine(img, matrix, (w, h))
+    return rotated_img

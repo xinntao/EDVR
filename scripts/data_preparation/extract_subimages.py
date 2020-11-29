@@ -1,12 +1,12 @@
 import cv2
-import mmcv
 import numpy as np
 import os
 import sys
 from multiprocessing import Pool
 from os import path as osp
+from tqdm import tqdm
 
-from basicsr.utils.util import ProgressBar
+from basicsr.utils import scandir
 
 
 def main():
@@ -94,16 +94,16 @@ def extract_subimages(opt):
         print(f'Folder {save_folder} already exists. Exit.')
         sys.exit(1)
 
-    img_list = list(mmcv.scandir(input_folder))
-    img_list = [osp.join(input_folder, v) for v in img_list]
+    img_list = list(scandir(input_folder, full_path=True))
 
-    pbar = ProgressBar(len(img_list))
+    pbar = tqdm(total=len(img_list), unit='image', desc='Extract')
     pool = Pool(opt['n_thread'])
     for path in img_list:
         pool.apply_async(
-            worker, args=(path, opt), callback=lambda arg: pbar.update(arg))
+            worker, args=(path, opt), callback=lambda arg: pbar.update(1))
     pool.close()
     pool.join()
+    pbar.close()
     print('All processes done.')
 
 

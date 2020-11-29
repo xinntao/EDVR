@@ -1,15 +1,14 @@
 import importlib
-import mmcv
 import numpy as np
 import random
 import torch
 import torch.utils.data
 from functools import partial
-from mmcv.runner import get_dist_info
 from os import path as osp
 
 from basicsr.data.prefetch_dataloader import PrefetchDataLoader
-from basicsr.utils import get_root_logger
+from basicsr.utils import get_root_logger, scandir
+from basicsr.utils.dist_util import get_dist_info
 
 __all__ = ['create_dataset', 'create_dataloader']
 
@@ -17,7 +16,7 @@ __all__ = ['create_dataset', 'create_dataloader']
 # scan all the files under the data folder with '_dataset' in file names
 data_folder = osp.dirname(osp.abspath(__file__))
 dataset_filenames = [
-    osp.splitext(osp.basename(v))[0] for v in mmcv.scandir(data_folder)
+    osp.splitext(osp.basename(v))[0] for v in scandir(data_folder)
     if v.endswith('_dataset.py')
 ]
 # import all the dataset modules
@@ -99,7 +98,7 @@ def create_dataloader(dataset,
             seed=seed) if seed is not None else None
     elif phase in ['val', 'test']:  # validation
         dataloader_args = dict(
-            dataset=dataset, batch_size=1, shuffle=False, num_workers=1)
+            dataset=dataset, batch_size=1, shuffle=False, num_workers=0)
     else:
         raise ValueError(f'Wrong dataset phase: {phase}. '
                          "Supported ones are 'train', 'val' and 'test'.")
